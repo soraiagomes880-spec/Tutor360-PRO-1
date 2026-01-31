@@ -23,7 +23,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language }) 
   const [isRecording, setIsRecording] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPlayingTarget, setIsPlayingTarget] = useState(false);
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language }) 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash-exp",
         contents: [{ parts: [{ text: `Say this clearly in ${language}: ${targetPhrase}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -93,16 +93,16 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language }) 
       return;
     }
     setFeedback("Analisando sua pronúncia...");
-    
+
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Analyze the pronunciation of this phrase in ${language} for a student: "${targetPhrase}". Assume the student just spoke this. Provide 3 specific tips on how to pronounce specific sounds or words in this text clearly. Respond in Portuguese.`,
-        });
-        setFeedback(response.text);
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: `Analyze the pronunciation of this phrase in ${language} for a student: "${targetPhrase}". Assume the student just spoke this. Provide 3 specific tips on how to pronounce specific sounds or words in this text clearly. Respond in Portuguese.`,
+      });
+      setFeedback(response.text);
     } catch (e) {
-        setFeedback("Erro ao analisar. Tente novamente.");
+      setFeedback("Erro ao analisar. Tente novamente.");
     }
   };
 
@@ -120,7 +120,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language }) 
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">O que você quer treinar?</label>
-              <button 
+              <button
                 onClick={() => setTargetPhrase('')}
                 className="text-[10px] font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest"
               >
@@ -134,7 +134,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language }) 
               className="w-full bg-black/30 p-6 rounded-2xl border border-white/10 text-xl font-medium text-white leading-relaxed focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all resize-none h-40"
             />
             <div className="flex justify-end">
-              <button 
+              <button
                 onClick={playTargetAudio}
                 disabled={isPlayingTarget || !targetPhrase.trim()}
                 className="flex items-center gap-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors uppercase tracking-widest"
@@ -169,22 +169,22 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language }) 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
             {feedback ? (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="flex items-center gap-4 text-green-400 mb-6 bg-green-400/10 p-5 rounded-2xl border border-green-400/20">
-                      <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
-                        <i className="fas fa-spell-check"></i>
-                      </div>
-                      <div>
-                          <p className="font-bold">Análise do Tutor IA</p>
-                          <p className="text-[10px] uppercase opacity-80 tracking-tighter">Foco na clareza e entonação</p>
-                      </div>
+                <div className="flex items-center gap-4 text-green-400 mb-6 bg-green-400/10 p-5 rounded-2xl border border-green-400/20">
+                  <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <i className="fas fa-spell-check"></i>
                   </div>
-                  <div className="prose prose-invert text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-white/5 p-6 rounded-2xl border border-white/5 italic">
-                      {feedback}
+                  <div>
+                    <p className="font-bold">Análise do Tutor IA</p>
+                    <p className="text-[10px] uppercase opacity-80 tracking-tighter">Foco na clareza e entonação</p>
                   </div>
-                  <div className="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-xl">
-                    <p className="text-[10px] text-indigo-300 font-bold uppercase mb-2">Dica de mestre:</p>
-                    <p className="text-xs text-slate-400 leading-relaxed">Pratique cada palavra difícil isoladamente antes de tentar a frase completa várias vezes.</p>
-                  </div>
+                </div>
+                <div className="prose prose-invert text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-white/5 p-6 rounded-2xl border border-white/5 italic">
+                  {feedback}
+                </div>
+                <div className="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-xl">
+                  <p className="text-[10px] text-indigo-300 font-bold uppercase mb-2">Dica de mestre:</p>
+                  <p className="text-xs text-slate-400 leading-relaxed">Pratique cada palavra difícil isoladamente antes de tentar a frase completa várias vezes.</p>
+                </div>
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-500 italic p-12 text-center">

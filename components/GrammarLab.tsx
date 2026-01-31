@@ -21,16 +21,16 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
     setAnalysis(null);
     setTranslation(null);
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Analyze this ${language} text for grammar, vocabulary, and flow. Suggest corrections and explain why in Portuguese: "${text}"`,
-        });
-        setAnalysis(response.text);
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: `Analyze this ${language} text for grammar, vocabulary, and flow. Suggest corrections and explain why in Portuguese: "${text}"`,
+      });
+      setAnalysis(response.text);
     } catch (e) {
-        setAnalysis("Erro na análise.");
+      setAnalysis("Erro na análise.");
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -38,16 +38,16 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
     if (!analysis || isTranslating) return;
     setIsTranslating(true);
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Translate the following educational analysis from Portuguese to ${targetTransLang}. Keep the same formatting and tone: "${analysis}"`,
-        });
-        setTranslation(response.text);
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: `Translate the following educational analysis from Portuguese to ${targetTransLang}. Keep the same formatting and tone: "${analysis}"`,
+      });
+      setTranslation(response.text);
     } catch (e) {
-        setTranslation("Erro ao traduzir a análise.");
+      setTranslation("Erro ao traduzir a análise.");
     } finally {
-        setIsTranslating(false);
+      setIsTranslating(false);
     }
   };
 
@@ -82,13 +82,13 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
           <div className="flex items-center justify-between mb-6">
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Feedback & Correções</label>
             {analysis && !isLoading && (
-               <div className="flex items-center gap-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gerado</span>
-               </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gerado</span>
+              </div>
             )}
           </div>
-          
+
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
             {isLoading ? (
               <div className="h-full flex flex-col items-center justify-center gap-4 text-indigo-400">
@@ -112,11 +112,11 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="pt-8 border-t border-white/5 space-y-4">
                   <div className="flex flex-col sm:flex-row gap-3 items-center">
                     <div className="flex-1 w-full">
-                      <select 
+                      <select
                         value={targetTransLang}
                         onChange={(e) => setTargetTransLang(e.target.value as Language)}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-300 outline-none focus:ring-1 focus:ring-indigo-500"
@@ -140,8 +140,8 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-600 italic">
-                  <i className="fas fa-spell-check text-4xl mb-4 opacity-10"></i>
-                  <p className="text-center max-w-[250px]">Envie seu texto para receber correções detalhadas e dicas de estilo.</p>
+                <i className="fas fa-spell-check text-4xl mb-4 opacity-10"></i>
+                <p className="text-center max-w-[250px]">Envie seu texto para receber correções detalhadas e dicas de estilo.</p>
               </div>
             )}
           </div>

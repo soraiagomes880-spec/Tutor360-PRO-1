@@ -24,12 +24,12 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  
+
   // Cultural Cards State
   const [insights, setInsights] = useState<CulturalInsights | null>(null);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [playingIdiomIdx, setPlayingIdiomIdx] = useState<number | null>(null);
-  
+
   const audioContextRef = useRef<AudioContext | null>(null);
   const langInfo = LANGUAGES.find(l => l.name === language);
 
@@ -56,9 +56,9 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
     try {
       const coords = await getCoordinates();
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
+
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite-latest',
+        model: 'gemini-1.5-flash',
         contents: `O aluno quer saber sobre este local ou aspecto cultural em ${langInfo?.region || language}: "${searchQuery}". 
                    Explique detalhadamente em Português, focando em curiosidades culturais e dicas para quem está aprendendo ${language}. 
                    Se for um local físico, mencione sua importância histórica ou popularidade atual.`,
@@ -90,7 +90,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: `Gere insights culturais sobre ${langInfo?.region || language}. 
                    Retorne um JSON com:
                    1. 'historicalCuriosity': { 'title', 'content' } (fato histórico fascinante)
@@ -135,7 +135,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
           }
         }
       });
-      
+
       const data = JSON.parse(response.text);
       setInsights(data);
     } catch (e) {
@@ -151,7 +151,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: `Quais são as 3 principais tendências culturais ou de entretenimento em ${langInfo?.region || language} esta semana? Resuma para um estudante de ${language} em Português.`,
         config: {
           tools: [{ googleSearch: {} }]
@@ -172,7 +172,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash-exp",
         contents: [{ parts: [{ text: phrase }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -230,7 +230,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
           <h2 className="text-3xl font-bold text-white mb-2">Cultura & Exploração</h2>
           <p className="text-slate-400">Descubra tendências ou explore locais específicos em países de língua {language}.</p>
         </div>
-        <button 
+        <button
           onClick={fetchTrends}
           className="self-start md:self-center p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-slate-400 flex items-center gap-2 text-sm"
           title="Ver tendências gerais"
@@ -245,14 +245,14 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
           <div className="absolute left-6 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:text-indigo-300 transition-colors">
             <i className="fas fa-map-location-dot text-xl"></i>
           </div>
-          <input 
+          <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={`O que você quer saber sobre ${langInfo?.region || language}? (Ex: Museus em Paris, Comida de rua em Tóquio...)`}
             className="w-full bg-black/40 border border-white/10 rounded-2xl py-5 pl-16 pr-32 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all shadow-inner"
           />
-          <button 
+          <button
             type="submit"
             disabled={isLoading || !searchQuery.trim()}
             className="absolute right-3 top-1/2 -translate-y-1/2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-900/40 text-sm flex items-center gap-2"
@@ -266,55 +266,54 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
       <div className="glass-panel p-10 rounded-[3rem] border-white/10 bg-gradient-to-br from-slate-900 to-indigo-950/20 shadow-2xl min-h-[400px]">
         {isLoading ? (
           <div className="py-24 flex flex-col items-center justify-center gap-6">
-             <div className="relative">
-                <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <i className="fas fa-earth-americas text-indigo-400 animate-pulse"></i>
-                </div>
-             </div>
-             <div className="text-center">
-                <p className="text-indigo-400 font-medium">Conectando ao conhecimento global...</p>
-                <p className="text-xs text-slate-500 mt-1 italic">Buscando dados em tempo real sobre {language}.</p>
-             </div>
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <i className="fas fa-earth-americas text-indigo-400 animate-pulse"></i>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-indigo-400 font-medium">Conectando ao conhecimento global...</p>
+              <p className="text-xs text-slate-500 mt-1 italic">Buscando dados em tempo real sobre {language}.</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
             {searchQuery && !isSearching && (
-                <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-widest mb-2">
-                    <i className="fas fa-location-dot"></i>
-                    Explorando: {searchQuery}
-                </div>
+              <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-widest mb-2">
+                <i className="fas fa-location-dot"></i>
+                Explorando: {searchQuery}
+              </div>
             )}
-            
+
             <div className="prose prose-invert prose-indigo max-w-none text-slate-300 leading-relaxed text-lg whitespace-pre-wrap">
               {content}
             </div>
-            
+
             {links.length > 0 && (
-                <div className="pt-8 border-t border-white/5">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-5 flex items-center gap-2">
-                        <i className="fas fa-map-pin"></i>
-                        Locais e Referências Encontradas
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                        {links.map((link, i) => (
-                            <a 
-                              key={i} 
-                              href={link.uri} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className={`px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 border ${
-                                link.uri.includes('google.com/maps') 
-                                ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20' 
-                                : 'bg-indigo-600/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20'
-                              }`}
-                            >
-                                <i className={`fas ${link.uri.includes('google.com/maps') ? 'fa-location-arrow' : 'fa-link'}`}></i>
-                                {link.title}
-                            </a>
-                        ))}
-                    </div>
+              <div className="pt-8 border-t border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-5 flex items-center gap-2">
+                  <i className="fas fa-map-pin"></i>
+                  Locais e Referências Encontradas
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {links.map((link, i) => (
+                    <a
+                      key={i}
+                      href={link.uri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 border ${link.uri.includes('google.com/maps')
+                          ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20'
+                          : 'bg-indigo-600/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20'
+                        }`}
+                    >
+                      <i className={`fas ${link.uri.includes('google.com/maps') ? 'fa-location-arrow' : 'fa-link'}`}></i>
+                      {link.title}
+                    </a>
+                  ))}
                 </div>
+              </div>
             )}
           </div>
         )}
@@ -330,9 +329,9 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {isLoadingInsights || !insights ? (
-             [...Array(3)].map((_, i) => (
-               <div key={i} className="h-64 glass-panel rounded-3xl border-white/5 bg-white/5 animate-pulse"></div>
-             ))
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="h-64 glass-panel rounded-3xl border-white/5 bg-white/5 animate-pulse"></div>
+            ))
           ) : (
             <>
               {/* Card 1: Historical Curiosity */}
@@ -373,7 +372,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
                     <div key={idx} className="group/idiom">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-emerald-400 font-bold text-sm">"{idiom.phrase}"</span>
-                        <button 
+                        <button
                           onClick={() => playIdiomAudio(idiom.phrase, idx)}
                           disabled={playingIdiomIdx !== null}
                           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${playingIdiomIdx === idx ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-white'}`}

@@ -26,13 +26,13 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [scanMessageIndex, setScanMessageIndex] = useState(0);
   const [targetTransLang, setTargetTransLang] = useState<Language>('Português Brasil');
-  
+
   // States for Pronunciation Challenge
   const [isRecordingUser, setIsRecordingUser] = useState(false);
   const [isAnalyzingPronunciation, setIsAnalyzingPronunciation] = useState(false);
   const [pronunciationFeedback, setPronunciationFeedback] = useState<string | null>(null);
   const [audioLevel, setAudioLevel] = useState(0);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -77,8 +77,8 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
     setCameraLoading(true);
     setShowCamera(true);
     try {
-      const constraints = { 
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } 
+      const constraints = {
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
@@ -132,22 +132,22 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
     setTranslation(null);
     setPronunciationFeedback(null);
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const base64Data = base64Img.split(',')[1];
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: {
-                parts: [
-                    { text: `You are a helpful language tutor. Analyze this image and explain what is happening in ${language}. Use clear, descriptive, and educational language. Respond ONLY in ${language}. Do not use Portuguese.` },
-                    { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }
-                ]
-            }
-        });
-        setResult(response.text);
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const base64Data = base64Img.split(',')[1];
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: {
+          parts: [
+            { text: `You are a helpful language tutor. Analyze this image and explain what is happening in ${language}. Use clear, descriptive, and educational language. Respond ONLY in ${language}. Do not use Portuguese.` },
+            { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }
+          ]
+        }
+      });
+      setResult(response.text);
     } catch (e) {
-        setResult("Falha ao analisar a imagem.");
+      setResult("Falha ao analisar a imagem.");
     } finally {
-        setIsScanning(false);
+      setIsScanning(false);
     }
   };
 
@@ -156,17 +156,17 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
     setIsTranslating(true);
     const target = specificLang || targetTransLang;
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `Translate the following educational text from ${language} to ${target}. Maintain a pedagogical, clear, and encouraging tone: "${result}"`,
-        });
-        setTranslation(response.text);
-        if (specificLang) setTargetTransLang(specificLang);
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: `Translate the following educational text from ${language} to ${target}. Maintain a pedagogical, clear, and encouraging tone: "${result}"`,
+      });
+      setTranslation(response.text);
+      if (specificLang) setTargetTransLang(specificLang);
     } catch (e) {
-        setTranslation("Erro ao traduzir.");
+      setTranslation("Erro ao traduzir.");
     } finally {
-        setIsTranslating(false);
+      setIsTranslating(false);
     }
   };
 
@@ -223,7 +223,7 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
         const base64Audio = (reader.result as string).split(',')[1];
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-1.5-flash',
           contents: {
             parts: [
               { text: `The user recorded themselves reading: "${result}". Analyze pronunciation in ${language} and respond in Portuguese with tips.` },
@@ -242,7 +242,7 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash-exp",
         contents: [{ parts: [{ text: `Read this in ${language}: ${result}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -286,14 +286,14 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700">
-      <input 
+      <input
         ref={fileRef}
-        type="file" 
-        accept="image/*" 
-        onChange={handleFileUpload} 
-        className="hidden" 
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
       />
-      
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">Varredura Visual</h2>
@@ -331,8 +331,8 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
             <img src={image} className="w-full h-full object-cover animate-in zoom-in-95 duration-500" alt="Captured" />
           ) : (
             <div className="text-center p-8 space-y-4">
-               <i className="fas fa-camera text-indigo-400 text-3xl opacity-30"></i>
-               <p className="text-xs text-slate-500 max-w-xs mx-auto">Tire uma foto para analisar o ambiente.</p>
+              <i className="fas fa-camera text-indigo-400 text-3xl opacity-30"></i>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">Tire uma foto para analisar o ambiente.</p>
             </div>
           )}
           <canvas ref={canvasRef} className="hidden" />
@@ -341,12 +341,12 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
         <div className="flex flex-col gap-6 h-auto lg:h-[650px]">
           <div className="flex-1 glass-panel p-6 md:p-8 rounded-[2rem] border-white/10 overflow-y-auto bg-slate-900/40 custom-scrollbar">
             <div className="flex items-center justify-between mb-6 sticky top-0 bg-slate-900/80 backdrop-blur-md py-2 z-10 -mx-6 px-6">
-               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Resultado</label>
-               {result && (
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Resultado</label>
+              {result && (
                 <button onClick={speakResult} disabled={isPlayingAudio} className="text-[10px] text-indigo-400 font-bold uppercase">
                   <i className={`fas ${isPlayingAudio ? 'fa-spinner fa-spin' : 'fa-volume-high'} mr-1`}></i> Ouvir
                 </button>
-               )}
+              )}
             </div>
 
             {isScanning ? (
@@ -357,25 +357,25 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
             ) : result ? (
               <div className="space-y-6">
                 <div className="text-slate-200 text-sm md:text-lg leading-relaxed whitespace-pre-wrap">{result}</div>
-                <button 
-                  onClick={() => translateResult('Português Brasil')} 
-                  disabled={isTranslating} 
+                <button
+                  onClick={() => translateResult('Português Brasil')}
+                  disabled={isTranslating}
                   className="w-full py-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-indigo-400 font-bold text-xs transition-all"
                 >
                   Traduzir para Português
                 </button>
                 {translation && <p className="p-4 bg-indigo-950/30 rounded-xl text-slate-400 text-xs italic">{translation}</p>}
-                
+
                 <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
-                     <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Desafio de Pronúncia</p>
-                     <button 
-                        onMouseDown={startRecordingUser} onMouseUp={stopRecordingUser}
-                        onTouchStart={startRecordingUser} onTouchEnd={stopRecordingUser}
-                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isRecordingUser ? 'bg-red-500 shadow-xl' : 'bg-indigo-600 hover:bg-indigo-500'}`}
-                     >
-                        <i className={`fas ${isRecordingUser ? 'fa-stop' : 'fa-microphone'} text-white`}></i>
-                     </button>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Desafio de Pronúncia</p>
+                    <button
+                      onMouseDown={startRecordingUser} onMouseUp={stopRecordingUser}
+                      onTouchStart={startRecordingUser} onTouchEnd={stopRecordingUser}
+                      className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${isRecordingUser ? 'bg-red-500 shadow-xl' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                    >
+                      <i className={`fas ${isRecordingUser ? 'fa-stop' : 'fa-microphone'} text-white`}></i>
+                    </button>
                   </div>
                   {pronunciationFeedback && <div className="text-xs text-slate-300 italic p-4 bg-white/5 rounded-xl border border-white/5">{pronunciationFeedback}</div>}
                 </div>

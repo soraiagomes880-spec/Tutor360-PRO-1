@@ -37,22 +37,22 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
   const [transcription, setTranscription] = useState<Message[]>([]);
   const [pastSessions, setPastSessions] = useState<ChatSessionLog[]>([]);
   const [viewingHistoryIdx, setViewingHistoryIdx] = useState<number | null>(null);
-  
+
   const [currentInput, setCurrentInput] = useState('');
   const [currentOutput, setCurrentOutput] = useState('');
   const [playingTtsId, setPlayingTtsId] = useState<string | null>(null);
   const [audioLevel, setAudioLevel] = useState(0);
   const [isTextLoading, setIsTextLoading] = useState(false);
   const [showCaptions, setShowCaptions] = useState(true);
-  
+
   const [userTextResponse, setUserTextResponse] = useState('');
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
-  
+
   // Translation states
   const [targetTranslationLang, setTargetTranslationLang] = useState<Language>('Português Brasil');
   const [messageTranslations, setMessageTranslations] = useState<Record<number, string>>({});
   const [isTranslatingIdx, setIsTranslatingIdx] = useState<number | null>(null);
-  
+
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const audioContextInRef = useRef<AudioContext | null>(null);
   const audioContextOutRef = useRef<AudioContext | null>(null);
@@ -106,7 +106,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
 
     const text = userTextResponse;
     setUserTextResponse('');
-    
+
     if (transcription.length === 0 && !isActive) {
       setTranscription([{ role: 'tutor', text: GREETINGS[language] }]);
     }
@@ -117,7 +117,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: [
           { role: 'user', parts: [{ text: `System context: You are a native tutor of ${language}. Response in ${language}. Be encouraging and end with a question. User input: ${text}` }] }
         ],
@@ -139,7 +139,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash-exp",
         contents: [{ parts: [{ text: `Read this perfectly in ${language}: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -159,8 +159,8 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
         };
         source.start();
       } else { setPlayingTtsId(null); }
-    } catch (e) { 
-      setPlayingTtsId(null); 
+    } catch (e) {
+      setPlayingTtsId(null);
     }
   };
 
@@ -174,10 +174,10 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
+
       const audioCtxIn = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const audioCtxOut = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-      
+
       audioContextInRef.current = audioCtxIn;
       audioContextOutRef.current = audioCtxOut;
       nextStartTimeRef.current = 0;
@@ -199,7 +199,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
       updateLevel();
 
       const sessionPromise = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        model: 'gemini-2.0-flash-exp',
         callbacks: {
           onopen: () => {
             audioCtxIn.resume();
@@ -248,7 +248,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
               setCurrentOutput('');
             }
             if (message.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => { try { s.stop(); } catch(e){} });
+              sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) { } });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
@@ -277,7 +277,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
         language
       };
       setPastSessions(prev => [newSession, ...prev]);
-      
+
       // Notify parent about session completion
       if (sessionStartTime && onSessionEnd) {
         const durationMinutes = (Date.now() - sessionStartTime) / 60000;
@@ -288,14 +288,14 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
     setIsActive(false);
     setIsConnecting(false);
     if (sessionPromiseRef.current) {
-      sessionPromiseRef.current.then(session => { try { session.close(); } catch (e) {} });
+      sessionPromiseRef.current.then(session => { try { session.close(); } catch (e) { } });
       sessionPromiseRef.current = null;
     }
-    if (audioContextInRef.current && audioContextInRef.current.state !== 'closed') audioContextInRef.current.close().catch(() => {});
-    if (audioContextOutRef.current && audioContextOutRef.current.state !== 'closed') audioContextOutRef.current.close().catch(() => {});
+    if (audioContextInRef.current && audioContextInRef.current.state !== 'closed') audioContextInRef.current.close().catch(() => { });
+    if (audioContextOutRef.current && audioContextOutRef.current.state !== 'closed') audioContextOutRef.current.close().catch(() => { });
     audioContextInRef.current = null;
     audioContextOutRef.current = null;
-    sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) {} });
+    sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) { } });
     sourcesRef.current.clear();
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     animationFrameRef.current = null;
@@ -303,8 +303,8 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
     setAudioLevel(0);
   };
 
-  const currentDisplayMessages = viewingHistoryIdx !== null 
-    ? pastSessions[viewingHistoryIdx].messages 
+  const currentDisplayMessages = viewingHistoryIdx !== null
+    ? pastSessions[viewingHistoryIdx].messages
     : transcription;
 
   return (
@@ -319,8 +319,8 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
               {viewingHistoryIdx !== null ? 'Revisando' : 'Live Chat'}
             </h2>
             <p className="text-slate-400 text-xs md:text-sm font-medium">
-              {viewingHistoryIdx !== null 
-                ? `${pastSessions[viewingHistoryIdx].language} • ${pastSessions[viewingHistoryIdx].date.toLocaleDateString()}` 
+              {viewingHistoryIdx !== null
+                ? `${pastSessions[viewingHistoryIdx].language} • ${pastSessions[viewingHistoryIdx].date.toLocaleDateString()}`
                 : `Conversação real.`}
             </p>
           </div>
@@ -330,11 +330,11 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
           <div className="flex items-center gap-3 md:gap-5 px-4 md:px-6 py-2 md:py-4 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl shadow-2xl backdrop-blur-md">
             <div className="flex gap-1 h-4 md:h-6 items-center">
               {[...Array(6)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className="w-0.5 md:w-1 bg-indigo-400 rounded-full" 
-                  style={{ 
-                    height: isConnecting ? '30%' : `${Math.max(20, audioLevel * 120 + (Math.random() * 20))}%`, 
+                <div
+                  key={i}
+                  className="w-0.5 md:w-1 bg-indigo-400 rounded-full"
+                  style={{
+                    height: isConnecting ? '30%' : `${Math.max(20, audioLevel * 120 + (Math.random() * 20))}%`,
                     transition: 'height 0.1s ease-out'
                   }}
                 ></div>
@@ -360,7 +360,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
               <p className="text-slate-500 text-xs md:text-sm max-w-sm mb-8 md:mb-12 leading-relaxed">
                 Pratique sua fala em <b>{language}</b> por voz ou tire dúvidas digitando abaixo.
               </p>
-              
+
               <button
                 onClick={startSession}
                 className="w-full max-w-xs py-4 md:py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl md:rounded-3xl shadow-2xl shadow-indigo-900/50 transition-all hover:scale-[1.05] active:scale-95 flex items-center justify-center gap-3 md:gap-4 text-base md:text-lg"
@@ -370,7 +370,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
               </button>
             </div>
           )}
-          
+
           {currentDisplayMessages.map((line, i) => (
             line.text && (
               <div key={`${line.role}-${i}`} className={`group relative p-4 md:p-6 rounded-2xl md:rounded-[2rem] max-w-[90%] sm:max-w-md animate-in slide-in-from-bottom-4 duration-500 ${line.role === 'tutor' ? 'bg-indigo-600/10 border border-indigo-500/20 self-start text-indigo-100 shadow-xl' : 'bg-slate-800/80 border border-white/5 self-end text-slate-100'}`}>
@@ -381,7 +381,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
                   </div>
                   {line.role === 'tutor' && (
                     <div className="flex flex-wrap gap-1 md:gap-2">
-                      <button 
+                      <button
                         onClick={() => playTts(line.text, `msg-${i}`)}
                         className={`text-[8px] md:text-[9px] flex items-center gap-1.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl transition-all font-black uppercase tracking-tighter ${playingTtsId === `msg-${i}` ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
                       >
@@ -394,7 +394,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
                 <div className={`transition-all duration-300 ${line.role === 'tutor' && !showCaptions ? 'blur-md select-none opacity-20' : 'blur-0 opacity-100'}`}>
                   <p className="text-sm md:text-base leading-relaxed font-semibold text-left">{line.text}</p>
                 </div>
-                
+
                 {line.role === 'tutor' && messageTranslations[i] && (
                   <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-white/10 animate-in fade-in slide-in-from-top-2">
                     <p className="text-[8px] md:text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Tradução</p>
@@ -433,7 +433,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-500 transition-colors pointer-events-none">
                     <i className="fas fa-keyboard"></i>
                   </div>
-                  <input 
+                  <input
                     type="text"
                     value={userTextResponse}
                     onChange={(e) => setUserTextResponse(e.target.value)}
@@ -442,7 +442,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
                     className="w-full bg-black/50 border border-white/5 rounded-2xl py-4 pl-12 pr-28 text-white placeholder-slate-600 outline-none focus:ring-2 focus:ring-indigo-600/40 focus:border-indigo-600 transition-all shadow-inner text-sm font-medium disabled:opacity-30"
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <button 
+                    <button
                       type="submit"
                       disabled={isConnecting || !userTextResponse.trim() || isTextLoading}
                       className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white font-black rounded-xl transition-all shadow-lg text-xs"
@@ -456,7 +456,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
                   <div className="flex items-center gap-4 w-full sm:w-auto">
                     <div className="flex flex-col gap-1 w-full sm:w-32">
                       <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest">Tradução</label>
-                      <select 
+                      <select
                         value={targetTranslationLang}
                         onChange={(e) => setTargetTranslationLang(e.target.value as Language)}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
@@ -473,7 +473,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd }) =>
                       </p>
                     </div>
                   </div>
-                  
+
                   {isActive && (
                     <button
                       onClick={stopSession}
