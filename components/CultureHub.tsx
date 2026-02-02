@@ -55,7 +55,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
 
     try {
       const coords = await getCoordinates();
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
@@ -88,7 +88,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
   const fetchInsights = async () => {
     setIsLoadingInsights(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
         contents: `Gere insights culturais sobre ${langInfo?.region || language}. 
@@ -149,7 +149,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
     setIsLoading(true);
     setSearchQuery('');
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
         contents: `Quais são as 3 principais tendências culturais ou de entretenimento em ${langInfo?.region || language} esta semana? Resuma para um estudante de ${language} em Português.`,
@@ -170,7 +170,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
     if (playingIdiomIdx !== null) return;
     setPlayingIdiomIdx(index);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-2.0-flash-exp",
         contents: [{ parts: [{ text: phrase }] }],
@@ -304,8 +304,8 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 border ${link.uri.includes('google.com/maps')
-                          ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20'
-                          : 'bg-indigo-600/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20'
+                        ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20'
+                        : 'bg-indigo-600/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20'
                         }`}
                     >
                       <i className={`fas ${link.uri.includes('google.com/maps') ? 'fa-location-arrow' : 'fa-link'}`}></i>

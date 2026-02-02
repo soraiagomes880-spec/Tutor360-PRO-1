@@ -32,7 +32,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9');
   const [status, setStatus] = useState<GenerationStatus>({ step: 'idle', message: '' });
   const [resultVideo, setResultVideo] = useState<string | null>(null);
-  
+
   // Image editing state
   const [rotation, setRotation] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -61,29 +61,29 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
   const applyEdits = (): Promise<string> => {
     return new Promise((resolve) => {
       if (!originalImage || !canvasRef.current) return resolve(image || '');
-      
+
       const img = new Image();
       img.onload = () => {
         const canvas = canvasRef.current!;
         const ctx = canvas.getContext('2d')!;
-        
+
         const isRotatedVertical = (rotation / 90) % 2 !== 0;
         canvas.width = isRotatedVertical ? img.naturalHeight : img.naturalWidth;
         canvas.height = isRotatedVertical ? img.naturalWidth : img.naturalHeight;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.save();
-        
+
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.rotate((rotation * Math.PI) / 180);
         if (isFlipped) ctx.scale(-1, 1);
-        
+
         // Apply Canvas filter
         ctx.filter = FILTERS[activeFilterIdx].filter;
-        
+
         ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
         ctx.restore();
-        
+
         resolve(canvas.toDataURL('image/png'));
       };
       img.src = originalImage;
@@ -110,7 +110,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
       const base64Data = bakedImage.split(',')[1];
 
       // Always create a new GoogleGenAI instance right before the API call
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
       let operation = await ai.models.generateVideos({
         model: 'veo-3.1-fast-generate-preview',
@@ -148,7 +148,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
       if (!downloadLink) throw new Error("Video generation failed to return a valid URL.");
 
       setStatus({ step: 'downloading', message: 'Finalizando sua obra-prima...' });
-      const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+      const response = await fetch(`${downloadLink}&key=${import.meta.env.VITE_GEMINI_API_KEY}`);
       const blob = await response.blob();
       const videoUrl = URL.createObjectURL(blob);
 
@@ -200,25 +200,24 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
             {/* Image Upload & Editor */}
             <div className="mb-6">
               <label className="block text-sm font-bold text-slate-500 uppercase tracking-widest mb-3">Imagem de Referência</label>
-              <div 
-                className={`relative group border-2 border-dashed rounded-2xl overflow-hidden transition-all h-64 flex flex-col items-center justify-center ${
-                  image ? 'border-blue-500/50' : 'border-white/10 hover:border-blue-500/30 bg-white/5 cursor-pointer'
-                }`}
+              <div
+                className={`relative group border-2 border-dashed rounded-2xl overflow-hidden transition-all h-64 flex flex-col items-center justify-center ${image ? 'border-blue-500/50' : 'border-white/10 hover:border-blue-500/30 bg-white/5 cursor-pointer'
+                  }`}
                 onClick={() => !image && fileInputRef.current?.click()}
               >
                 {image ? (
                   <div className="relative w-full h-full flex items-center justify-center bg-black/20">
-                    <img 
-                      src={image} 
-                      className="max-w-full max-h-full transition-all duration-300" 
-                      style={{ 
+                    <img
+                      src={image}
+                      className="max-w-full max-h-full transition-all duration-300"
+                      style={{
                         transform: `rotate(${rotation}deg) scaleX(${isFlipped ? -1 : 1})`,
                         filter: FILTERS[activeFilterIdx].filter
-                      }} 
-                      alt="Preview" 
+                      }}
+                      alt="Preview"
                     />
                     <div className="absolute top-4 right-4 flex flex-col gap-2">
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                         className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 hover:bg-white/20 transition-all text-white"
                         title="Trocar Imagem"
@@ -242,7 +241,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
               {/* Editing Toolbar */}
               {image && (
                 <div className="flex items-center justify-center gap-4 mt-4 px-2 py-3 bg-white/5 rounded-2xl border border-white/5">
-                  <button 
+                  <button
                     onClick={handleRotate}
                     className="flex flex-col items-center gap-1 group"
                   >
@@ -252,7 +251,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
                     <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Girar</span>
                   </button>
 
-                  <button 
+                  <button
                     onClick={handleFlip}
                     className="flex flex-col items-center gap-1 group"
                   >
@@ -262,7 +261,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
                     <span className="text-[10px] text-slate-500 uppercase tracking-tighter">Inverter</span>
                   </button>
 
-                  <button 
+                  <button
                     onClick={handleCycleFilter}
                     className="flex flex-col items-center gap-1 group"
                   >
@@ -276,7 +275,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
 
                   <div className="h-8 w-px bg-white/10 mx-1"></div>
 
-                  <button 
+                  <button
                     onClick={() => {
                       setRotation(0);
                       setIsFlipped(false);
@@ -312,11 +311,10 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
                   <button
                     key={ratio}
                     onClick={() => setAspectRatio(ratio)}
-                    className={`py-3 rounded-xl border transition-all flex items-center justify-center gap-2 ${
-                      aspectRatio === ratio 
-                        ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-lg shadow-blue-900/10' 
-                        : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:border-white/20'
-                    }`}
+                    className={`py-3 rounded-xl border transition-all flex items-center justify-center gap-2 ${aspectRatio === ratio
+                      ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-lg shadow-blue-900/10'
+                      : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:border-white/20'
+                      }`}
                   >
                     <i className={`fas ${ratio === '16:9' ? 'fa-tv' : 'fa-mobile-screen'}`}></i>
                     <span className="font-medium">{ratio === '16:9' ? 'Paisagem' : 'Retrato'}</span>
@@ -393,22 +391,22 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
 
               {resultVideo && status.step === 'complete' && (
                 <div className="w-full h-full flex flex-col animate-in zoom-in duration-500">
-                  <video 
-                    src={resultVideo} 
-                    controls 
-                    autoPlay 
-                    loop 
+                  <video
+                    src={resultVideo}
+                    controls
+                    autoPlay
+                    loop
                     className={`w-full h-full ${aspectRatio === '16:9' ? 'object-contain' : 'object-cover'}`}
                   />
                   <div className="absolute bottom-6 right-6 flex gap-3">
-                    <a 
-                      href={resultVideo} 
+                    <a
+                      href={resultVideo}
                       download="tutor360_video.mp4"
                       className="bg-blue-600 hover:bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110"
                     >
                       <i className="fas fa-download"></i>
                     </a>
-                    <button 
+                    <button
                       onClick={reset}
                       className="bg-slate-800 hover:bg-slate-700 text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110"
                     >

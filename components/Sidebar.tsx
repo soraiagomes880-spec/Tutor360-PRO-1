@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, usage
 
         {/* System Check Warning */}
         {/* System Check Warning */}
-        {!process.env.API_KEY && (
+        {!import.meta.env.VITE_GEMINI_API_KEY && (
           <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
             <div className="flex items-center gap-2 text-red-400 mb-2">
               <i className="fas fa-triangle-exclamation"></i>

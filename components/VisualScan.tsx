@@ -132,7 +132,7 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
     setTranslation(null);
     setPronunciationFeedback(null);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const base64Data = base64Img.split(',')[1];
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
@@ -157,7 +157,7 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
     setIsTranslating(true);
     const target = specificLang || targetTransLang;
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-1.5-flash',
         contents: `Translate the following educational text from ${language} to ${target}. Maintain a pedagogical, clear, and encouraging tone: "${result}"`,
@@ -222,7 +222,7 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
       reader.readAsDataURL(blob);
       reader.onloadend = async () => {
         const base64Audio = (reader.result as string).split(',')[1];
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
         const response = await ai.models.generateContent({
           model: 'gemini-1.5-flash',
           contents: {
@@ -241,7 +241,7 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language }) => {
     if (!result || isPlayingAudio) return;
     setIsPlayingAudio(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-2.0-flash-exp",
         contents: [{ parts: [{ text: `Read this in ${language}: ${result}` }] }],
