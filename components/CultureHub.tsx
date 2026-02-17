@@ -146,8 +146,8 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction }) =>
       }));
 
       const text = response.text || '';
-      const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(jsonStr);
+      console.log("PRO Debug: Culture Data Received.");
+      const parsed = JSON.parse(text || "{}");
 
       if (parsed && parsed.history && parsed.etiquette) {
         setCultureData(parsed);
