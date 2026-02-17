@@ -84,9 +84,11 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction }) =>
     try {
       const apiKey = getGeminiKey();
       if (!apiKey) {
-        setError("API Key não configurada. Use o título (5 cliques) para configurar.");
+        setError("API Key não configurada. Clique no título do app (5 vezes) para configurar sua chave e tente novamente.");
+        setIsLoading(false);
         return;
       }
+
       const ai = new GoogleGenAI({ apiKey });
       const promptText = query
         ? `Aja como um guia cultural. Explore o tema "${query}" relacionado a países que falam ${language}.`
@@ -154,10 +156,9 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction }) =>
       }
     } catch (e: any) {
       console.error("CultureHub Error:", e);
-      setError("Não conseguimos encontrar informações para essa busca específica. Tente algo mais amplo.");
+      setError("Não conseguimos carregar as tendências agora. Verifique sua chave de API e tente novamente.");
     } finally {
       setIsLoading(false);
-      setIsSearching(false);
     }
   };
 

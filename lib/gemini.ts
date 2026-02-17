@@ -2,9 +2,12 @@
 import { GoogleGenAI } from '@google/genai';
 
 export const getGeminiKey = (): string | null => {
-    // 1. Prioridade para variáveis de ambiente (Vercel/Vite)
-    const envKey = (process.env as any).VITE_API_KEY || (process.env as any).API_KEY;
-    if (envKey && envKey !== 'undefined') return envKey;
+    // 1. Prioridade para variáveis de ambiente (Vercel/Vite/Browser)
+    const env = (import.meta as any).env || {};
+    const processEnv = (typeof process !== 'undefined' ? process.env : {}) as any;
+
+    const envKey = env.VITE_API_KEY || processEnv.VITE_API_KEY || processEnv.API_KEY;
+    if (envKey && envKey !== 'undefined' && envKey !== '') return envKey;
 
     // 2. Fallback para localStorage (Manual/Secret Setup)
     if (typeof window !== 'undefined') {

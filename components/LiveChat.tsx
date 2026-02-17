@@ -106,11 +106,16 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction }) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const apiKey = getGeminiKey();
+
+      console.log("PRO Debug: Iniciando Chat de Voz...");
+
       if (!apiKey) {
-        alert("API Key não configurada. Use o título (5 cliques) para configurar.");
+        console.error("PRO Debug: Chave de API não encontrada.");
+        alert("API Key não configurada. Clique no título 'Tutor 360' (5 vezes) para configurar sua chave.");
         setIsConnecting(false);
         return;
       }
+
       const ai = new GoogleGenAI({ apiKey });
       const audioCtxIn = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const audioCtxOut = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -134,10 +139,12 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction }) => {
       };
       updateLevel();
 
+      console.log("PRO Debug: Conectando ao modelo Live...");
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.0-flash-exp',
         callbacks: {
           onopen: () => {
+            console.log("PRO Debug: Conexão aberta.");
             setIsActive(true);
             setIsConnecting(false);
             setTranscription([{ role: 'tutor', text: GREETINGS[language] }]);
@@ -182,12 +189,17 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction }) => {
               setCurrentOutput('');
             }
           },
-          onclose: () => stopSession(),
-          onerror: () => stopSession(),
+          onclose: () => {
+            console.log("PRO Debug: Conexão fechada.");
+            stopSession();
+          },
+          onerror: (err) => {
+            console.error("PRO Debug Error:", err);
+            stopSession();
+          },
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          // PLANO PRO: Usando voz premium Zephyr por padrão
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
@@ -198,7 +210,10 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction }) => {
         }
       });
       sessionPromiseRef.current = sessionPromise;
-    } catch (err) { stopSession(); }
+    } catch (err) {
+      console.error("PRO Debug Exception:", err);
+      stopSession();
+    }
   };
 
   const stopSession = () => {
