@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { AspectRatio, GenerationStatus, VideoResult } from '../types';
 import { withRetry } from '../utils';
+import { getGeminiKey } from '../lib/gemini';
 
 interface VeoGeneratorProps {
   onComplete: (video: VideoResult) => void;
@@ -37,7 +38,12 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
 
     try {
       const base64Data = image.split(',')[1];
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = getGeminiKey();
+      if (!apiKey) {
+        setStatus({ step: 'error', message: "API Key não configurada." });
+        return;
+      }
+      const ai = new GoogleGenAI({ apiKey });
 
       // Fix: Cast operation to any to access .done and .response properties on the operation object
       let operation: any = await withRetry(() => ai.models.generateVideos({
@@ -55,7 +61,8 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
       const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
       if (!downloadLink) throw new Error("Falha ao retornar vídeo.");
 
-      const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+      const apiKeyAfter = getGeminiKey();
+      const response = await fetch(`${downloadLink}&key=${apiKeyAfter}`);
       const blob = await response.blob();
       const videoUrl = URL.createObjectURL(blob);
       setResultVideo(videoUrl);
@@ -83,7 +90,7 @@ export const VeoGenerator: React.FC<VeoGeneratorProps> = ({ onComplete }) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="glass-panel p-8 rounded-[2rem] border-white/10 shadow-xl">
           <h2 className="text-xl font-semibold mb-6">Criar Cena Cinemática</h2>
-          <div 
+          <div
             className="relative group border-2 border-dashed rounded-2xl overflow-hidden h-64 flex flex-col items-center justify-center cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
           >
