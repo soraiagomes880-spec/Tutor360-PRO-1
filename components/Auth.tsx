@@ -2,13 +2,18 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-export const Auth: React.FC = () => {
+interface AuthProps {
+  forceRecovery?: boolean;
+  onComplete?: () => void;
+}
+
+export const Auth: React.FC<AuthProps> = ({ forceRecovery, onComplete }) => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(forceRecovery || false);
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -36,6 +41,7 @@ export const Auth: React.FC = () => {
         setMessage('Senha atualizada com sucesso! Você já pode entrar.');
         setIsResettingPassword(false);
         setIsForgotPassword(false);
+        if (onComplete) onComplete();
       } else if (isForgotPassword) {
         const { error } = await supabase.auth.resetPasswordForEmail(email);
         if (error) throw error;

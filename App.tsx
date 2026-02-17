@@ -24,6 +24,7 @@ const App: React.FC = () => {
   const [plan, setPlan] = useState<PlanLevel>('Essencial');
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [setupClickCount, setSetupClickCount] = useState(0);
+  const [recoveryMode, setRecoveryMode] = useState(false);
 
   // States for Inline Setup
   const [showSetup, setShowSetup] = useState(false);
@@ -75,8 +76,11 @@ const App: React.FC = () => {
       setSession(session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -147,8 +151,8 @@ const App: React.FC = () => {
     }
   };
 
-  if (supabase && !session) {
-    return <Auth />;
+  if (supabase && (!session || recoveryMode)) {
+    return <Auth forceRecovery={recoveryMode} onComplete={() => setRecoveryMode(false)} />;
   }
 
   if (isLoadingData) {
@@ -172,7 +176,21 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
             <button onClick={() => setShowSetup(false)} className="absolute top-3 right-3 text-slate-500 hover:text-white"><i className="fas fa-times"></i></button>
-            <h3 className="text-lg font-bold text-white mb-4 text-center">Conectar Supabase</h3>
+            <h3 className="text-lg font-bold text-white mb-2 text-center">Configuração de IA</h3>
+
+            <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] space-y-1">
+              <p className="font-bold text-slate-500 uppercase tracking-widest">Status da Conexão Global (Vercel):</p>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 italic">Variável VITE_API_KEY:</span>
+                {import.meta.env.VITE_API_KEY ? <span className="text-emerald-400 font-black">CONECTADO</span> : <span className="text-amber-500 font-black">PENDENTE</span>}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 italic">Variável VITE_SUPABASE_URL:</span>
+                {import.meta.env.VITE_SUPABASE_URL ? <span className="text-emerald-400 font-black">CONECTADO</span> : <span className="text-amber-500 font-black">PENDENTE</span>}
+              </div>
+            </div>
+
+            <h3 className="text-xs font-bold text-slate-400 mb-4 uppercase tracking-widest text-center">Ajuste Manual (Local)</h3>
 
 
             <div className="space-y-3">
