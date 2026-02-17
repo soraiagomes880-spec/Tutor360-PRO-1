@@ -22,13 +22,20 @@ const getEnv = (key: string) => {
 let supabaseInstance = null;
 
 try {
-  const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('SUPABASE_URL') || (typeof window !== 'undefined' ? localStorage.getItem('supabase_url') : null);
-  const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY') || (typeof window !== 'undefined' ? localStorage.getItem('supabase_key') : null);
+  // Priority: Vercel Env Vars -> LocalStorage
+  const envUrl = getEnv('VITE_SUPABASE_URL') || getEnv('SUPABASE_URL');
+  const envKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY');
 
-  if (supabaseUrl && supabaseAnonKey &&
-    supabaseUrl !== "undefined" && supabaseAnonKey !== "undefined" &&
-    supabaseUrl !== "" && supabaseAnonKey !== "") {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  const localUrl = typeof window !== 'undefined' ? localStorage.getItem('supabase_url') : null;
+  const localKey = typeof window !== 'undefined' ? localStorage.getItem('supabase_key') : null;
+
+  const finalUrl = envUrl || localUrl;
+  const finalKey = envKey || localKey;
+
+  if (finalUrl && finalKey &&
+    finalUrl !== "undefined" && finalKey !== "undefined" &&
+    finalUrl !== "" && finalKey !== "") {
+    supabaseInstance = createClient(finalUrl, finalKey);
   }
 } catch (error) {
   console.error("Supabase initialization failed:", error);
