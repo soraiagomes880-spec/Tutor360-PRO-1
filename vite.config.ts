@@ -1,22 +1,23 @@
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { defineConfig, loadEnv } from 'vite';
+
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
-
-
-  return {
-    server: {
-      port: 3000,
-      host: '0.0.0.0',
-    },
-    plugins: [react()],
-    resolve: {
-      alias: {
-        '@': path.resolve(path.dirname(fileURLToPath(new URL(import.meta.url))), '.'),
+export default defineConfig({
+  plugins: [react()],
+  define: {
+    'process.env': {
+      API_KEY: JSON.stringify(process.env.API_KEY),
+      SUPABASE_URL: JSON.stringify(process.env.SUPABASE_URL),
+      SUPABASE_ANON_KEY: JSON.stringify(process.env.SUPABASE_ANON_KEY),
+      NODE_ENV: JSON.stringify(process.env.NODE_ENV)
+    }
+  },
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
       }
     }
-  };
+  }
 });

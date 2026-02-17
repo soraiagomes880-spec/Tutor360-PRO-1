@@ -1,0 +1,10 @@
+
+{
+  "name": "TUTOR 360 IA",
+  "description": "Your ultimate AI-powered language learning companion. Master any language with real-time voice conversations, writing feedback, and visual translation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

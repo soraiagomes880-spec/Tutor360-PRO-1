@@ -1,0 +1,9 @@
+{
+  "name": "Tutor 360 IA - PLANO ESSENCIAL",
+  "description": "An AI-powered language learning platform featuring live voice chat, pronunciation analysis, and real-world visual scanning.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tutor 360 IA - Premium Dark Design System */
+
+@layer base {
+  :root {
+    /* Dark theme as default for this landing page */
+    --background: 230 25% 5%;
+    --foreground: 0 0% 98%;
+
+    --card: 230 20% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 230 20% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Purple/Violet accent */
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Gold/Yellow for CTAs */
+    --secondary: 45 93% 47%;
+    --secondary-foreground: 230 25% 5%;
+
+    --muted: 230 15% 15%;
+    --muted-foreground: 230 10% 60%;
+
+    --accent: 262 70% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 230 15% 18%;
+    --input: 230 15% 18%;
+    --ring: 262 83% 58%;
+
+    --radius: 0.75rem;
+
+    /* Custom gradients */
+    --gradient-dark: linear-gradient(180deg, hsl(230, 25%, 5%) 0%, hsl(230, 30%, 10%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(230, 20%, 10%) 0%, hsl(230, 25%, 8%) 100%);
+    --gradient-purple: linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(280, 80%, 45%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(45, 93%, 47%) 0%, hsl(38, 95%, 55%) 100%);
+    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(262, 60%, 20%) 0%, transparent 50%);
+
+    /* Shadows */
+    --shadow-glow-purple: 0 0 60px -15px hsl(262 83% 58% / 0.4);
+    --shadow-glow-gold: 0 0 40px -10px hsl(45 93% 47% / 0.3);
+
+    /* Plan colors */
+    --plan-essential: 262 83% 58%;
+    --plan-pro: 217 91% 60%;
+    --plan-elite: 45 93% 47%;
+
+    --sidebar-background: 230 25% 5%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 230 15% 15%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 230 15% 18%;
+    --sidebar-ring: 262 83% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-gradient-purple {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(280, 80%, 65%) 100%);
+  }
+
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(45, 93%, 47%) 0%, hsl(38, 95%, 60%) 100%);
+  }
+
+  .bg-gradient-dark {
+    background: linear-gradient(180deg, hsl(230, 25%, 5%) 0%, hsl(230, 30%, 10%) 100%);
+  }
+
+  .bg-gradient-card {
+    background: linear-gradient(135deg, hsl(230, 20%, 10%) 0%, hsl(230, 25%, 8%) 100%);
+  }
+
+  .bg-hero-glow {
+    background: radial-gradient(ellipse at 50% 0%, hsl(262, 60%, 20%) 0%, transparent 50%);
+  }
+
+  .shadow-glow-purple {
+    box-shadow: 0 0 60px -15px hsl(262 83% 58% / 0.4);
+  }
+
+  .shadow-glow-gold {
+    box-shadow: 0 0 40px -10px hsl(45 93% 47% / 0.3);
+  }
+
+  /* Floating animation for 3D phones */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-15px);
+    }
+  }
+
+  .animate-float {
+    animation: float 4s ease-in-out infinite;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

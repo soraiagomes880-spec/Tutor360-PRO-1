@@ -1,397 +1,304 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleGenAI, Modality, Type } from '@google/genai';
+import { GoogleGenAI, Modality, Type, GenerateContentResponse } from '@google/genai';
 import { Language, LANGUAGES } from '../types';
+import { withRetry } from '../utils';
+import { getGeminiKey } from '../lib/gemini';
+
+interface Expression {
+  phrase: string;
+  meaning: string;
+  example: string;
+}
+
+interface CultureData {
+  history: { title: string; text: string };
+  etiquette: { title: string; text: string };
+  expressions: Expression[];
+}
 
 interface CultureHubProps {
   language: Language;
+  onAction?: () => Promise<boolean> | boolean;
 }
 
-interface GroundingLink {
-  title: string;
-  uri: string;
-}
-
-interface CulturalInsights {
-  historicalCuriosity: { title: string; content: string };
-  socialCustom: { title: string; content: string };
-  idioms: Array<{ phrase: string; meaning: string; usage: string }>;
-}
-
-export const CultureHub: React.FC<CultureHubProps> = ({ language }) => {
-  const [content, setContent] = useState<string | null>(null);
-  const [links, setLinks] = useState<GroundingLink[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction }) => {
+  const [cultureData, setCultureData] = useState<CultureData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-
-  // Cultural Cards State
-  const [insights, setInsights] = useState<CulturalInsights | null>(null);
-  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
-  const [playingIdiomIdx, setPlayingIdiomIdx] = useState<number | null>(null);
+  const [playingAudioIdx, setPlayingAudioIdx] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
-  const langInfo = LANGUAGES.find(l => l.name === language);
 
-  const getCoordinates = (): Promise<{ latitude: number, longitude: number } | null> => {
-    return new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(null);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
-        () => resolve(null),
-        { timeout: 5000 }
-      );
-    });
-  };
-
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    setIsSearching(true);
-    setIsLoading(true);
-    setContent(null);
-    setLinks([]);
-
-    try {
-      const coords = await getCoordinates();
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: `O aluno quer saber sobre este local ou aspecto cultural em ${langInfo?.region || language}: "${searchQuery}". 
-                   Explique detalhadamente em Português, focando em curiosidades culturais e dicas para quem está aprendendo ${language}. 
-                   Se for um local físico, mencione sua importância histórica ou popularidade atual.`,
-        config: {
-          tools: [{ googleMaps: {} }, { googleSearch: {} }],
-          toolConfig: coords ? {
-            retrievalConfig: {
-              latLng: {
-                latitude: coords.latitude,
-                longitude: coords.longitude
-              }
-            }
-          } : undefined
-        }
-      });
-
-      setContent(response.text);
-      extractLinks(response);
-    } catch (e) {
-      setContent("Desculpe, não consegui explorar esse local agora. Tente novamente.");
-    } finally {
-      setIsLoading(false);
-      setIsSearching(false);
+  const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> => {
+    const dataInt16 = new Int16Array(data.buffer);
+    const frameCount = dataInt16.length / numChannels;
+    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+    for (let channel = 0; channel < numChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+      for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
     }
+    return buffer;
   };
 
-  const fetchInsights = async () => {
-    setIsLoadingInsights(true);
+  const playExpression = async (text: string, index: number) => {
+    if (playingAudioIdx !== null) return;
+    setPlayingAudioIdx(index);
     try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: `Gere insights culturais sobre ${langInfo?.region || language}. 
-                   Retorne um JSON com:
-                   1. 'historicalCuriosity': { 'title', 'content' } (fato histórico fascinante)
-                   2. 'socialCustom': { 'title', 'content' } (dica de etiqueta ou costume local)
-                   3. 'idioms': Lista de 3 objetos { 'phrase', 'meaning', 'usage' } (expressões idiomáticas comuns).
-                   Tudo em Português Brasil, exceto o campo 'phrase' das expressões que deve ser no idioma ${language}.`,
+      const apiKey = getGeminiKey();
+      if (!apiKey) return; // Silent fail or handle UI feedback
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: `Say this naturally in ${language}: ${text}` }] }],
+        config: {
+          // Fix: Correct typo in responseModalities (was responseModalalities)
+          responseModalities: [Modality.AUDIO],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+        },
+      }));
+      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        if (!audioContextRef.current) audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+        const ctx = audioContextRef.current;
+        const binaryString = atob(base64Audio);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+        const audioBuffer = await decodeAudioData(bytes, ctx, 24000, 1);
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        source.onended = () => setPlayingAudioIdx(null);
+        source.start();
+      } else { setPlayingAudioIdx(null); }
+    } catch (e) { setPlayingAudioIdx(null); }
+  };
+
+  const fetchCultureData = async (query?: string) => {
+    setIsLoading(true);
+    setError(null);
+    setError(null);
+
+    // Only track usage if it's a specific query search, not the initial load
+    if (query && onAction) {
+      const allowed = await onAction();
+      if (!allowed) {
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    try {
+      const apiKey = getGeminiKey();
+      if (!apiKey) {
+        throw new Error("API Key não configurada. Conecte na nuvem.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
+      const promptText = query
+        ? `Aja como um guia cultural. Explore o tema "${query}" relacionado a países que falam ${language}.`
+        : `Gere um resumo cultural dinâmico sobre curiosidades e costumes atuais em países que falam ${language}.`;
+
+      const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [{
+          parts: [{
+            text: `${promptText} 
+            REGRAS OBRIGATÓRIAS:
+            1. Retorne apenas o objeto JSON.
+            2. Responda as explicações em PORTUGUÊS.
+            3. As expressões devem estar no idioma original (${language}).
+            4. Seja conciso e use fatos interessantes.`
+          }]
+        }],
         config: {
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              historicalCuriosity: {
+              history: {
                 type: Type.OBJECT,
                 properties: {
                   title: { type: Type.STRING },
-                  content: { type: Type.STRING }
+                  text: { type: Type.STRING }
                 },
-                required: ["title", "content"]
+                required: ["title", "text"]
               },
-              socialCustom: {
+              etiquette: {
                 type: Type.OBJECT,
                 properties: {
                   title: { type: Type.STRING },
-                  content: { type: Type.STRING }
+                  text: { type: Type.STRING }
                 },
-                required: ["title", "content"]
+                required: ["title", "text"]
               },
-              idioms: {
+              expressions: {
                 type: Type.ARRAY,
                 items: {
                   type: Type.OBJECT,
                   properties: {
                     phrase: { type: Type.STRING },
                     meaning: { type: Type.STRING },
-                    usage: { type: Type.STRING }
+                    example: { type: Type.STRING }
                   },
-                  required: ["phrase", "meaning", "usage"]
+                  required: ["phrase", "meaning", "example"]
                 }
               }
             },
-            required: ["historicalCuriosity", "socialCustom", "idioms"]
+            required: ["history", "etiquette", "expressions"]
           }
         }
-      });
+      }));
 
-      const data = JSON.parse(response.text);
-      setInsights(data);
-    } catch (e) {
-      console.error("Erro ao carregar insights culturais:", e);
-    } finally {
-      setIsLoadingInsights(false);
-    }
-  };
+      const text = response.text || '';
+      const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(jsonStr);
 
-  const fetchTrends = async () => {
-    setIsLoading(true);
-    setSearchQuery('');
-    try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: `Quais são as 3 principais tendências culturais ou de entretenimento em ${langInfo?.region || language} esta semana? Resuma para um estudante de ${language} em Português.`,
-        config: {
-          tools: [{ googleSearch: {} }]
-        }
-      });
-      setContent(response.text);
-      extractLinks(response);
-    } catch (e) {
-      setContent("Não foi possível carregar as notícias agora.");
+      if (parsed && parsed.history && parsed.etiquette) {
+        setCultureData(parsed);
+      } else {
+        throw new Error("Formato de dados incompleto.");
+      }
+    } catch (e: any) {
+      console.error("CultureHub Error:", e);
+      setError("Não conseguimos encontrar informações para essa busca específica. Tente algo mais amplo.");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const playIdiomAudio = async (phrase: string, index: number) => {
-    if (playingIdiomIdx !== null) return;
-    setPlayingIdiomIdx(index);
-    try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash-exp",
-        contents: [{ parts: [{ text: phrase }] }],
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-        },
-      });
-      const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (base64Audio) {
-        if (!audioContextRef.current) audioContextRef.current = new AudioContext({ sampleRate: 24000 });
-        const ctx = audioContextRef.current;
-        const decode = (b64: string) => {
-          const bin = atob(b64);
-          const bytes = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-          return bytes;
-        };
-        const decodeAudioData = async (data: Uint8Array, c: AudioContext): Promise<AudioBuffer> => {
-          const dataInt16 = new Int16Array(data.buffer);
-          const buffer = c.createBuffer(1, dataInt16.length, 24000);
-          const channelData = buffer.getChannelData(0);
-          for (let i = 0; i < dataInt16.length; i++) channelData[i] = dataInt16[i] / 32768.0;
-          return buffer;
-        };
-        const audioBuffer = await decodeAudioData(decode(base64Audio), ctx);
-        const source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(ctx.destination);
-        source.onended = () => setPlayingIdiomIdx(null);
-        source.start();
-      } else { setPlayingIdiomIdx(null); }
-    } catch (e) { setPlayingIdiomIdx(null); }
-  };
-
-  const extractLinks = (response: any) => {
-    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    if (chunks) {
-      const formattedLinks: GroundingLink[] = chunks.map((c: any) => {
-        if (c.maps) return { title: c.maps.title || 'Ver no Maps', uri: c.maps.uri };
-        if (c.web) return { title: c.web.title || 'Saiba mais', uri: c.web.uri };
-        return null;
-      }).filter((l: any) => l !== null);
-      setLinks(formattedLinks);
+      setIsSearching(false);
     }
   };
 
   useEffect(() => {
-    fetchTrends();
-    fetchInsights();
+    fetchCultureData();
   }, [language]);
 
+  const handleSearchClick = () => {
+    alert("Busca em Tempo Real (Google Search) e Business Mode são exclusivos do Plano ELITE. Faça o upgrade agora!");
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700 pb-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Cultura & Exploração</h2>
-          <p className="text-slate-400">Descubra tendências ou explore locais específicos em países de língua {language}.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Cultura & Exploração</h2>
+          <p className="text-slate-400 text-sm md:text-base">Descubra curiosidades ou explore locais específicos em países de língua {language}.</p>
         </div>
         <button
-          onClick={fetchTrends}
-          className="self-start md:self-center p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-slate-400 flex items-center gap-2 text-sm"
-          title="Ver tendências gerais"
+          onClick={handleSearchClick}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1e293b]/40 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-slate-500 text-sm font-medium opacity-60"
         >
-          <i className="fas fa-arrow-trend-up"></i>
-          Tendências
+          <i className="fas fa-lock text-[10px]"></i>
+          <i className="fas fa-arrow-trend-up text-indigo-400"></i>
+          Tendências ELITE
         </button>
       </div>
 
-      <div className="glass-panel p-6 rounded-[2rem] border-white/10 bg-indigo-500/5">
-        <form onSubmit={handleSearch} className="relative group">
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-indigo-400 group-focus-within:text-indigo-300 transition-colors">
-            <i className="fas fa-map-location-dot text-xl"></i>
+      <div className="glass-panel p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] border-white/5 bg-[#0f172a]/50">
+        <div className="flex flex-col sm:flex-row items-stretch gap-4 relative">
+          <div className="flex-1 flex items-center bg-black/40 rounded-2xl md:rounded-3xl border border-white/5 px-4 md:px-6 py-1 opacity-50">
+            <div className="text-slate-600 mr-3 shrink-0">
+              <i className="fas fa-lock"></i>
+            </div>
+            <input
+              type="text"
+              disabled
+              placeholder={`Busca Real-Time (ELITE)...`}
+              className="flex-1 bg-transparent py-4 text-slate-600 placeholder-slate-700 outline-none text-sm cursor-not-allowed"
+            />
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`O que você quer saber sobre ${langInfo?.region || language}? (Ex: Museus em Paris, Comida de rua em Tóquio...)`}
-            className="w-full bg-black/40 border border-white/10 rounded-2xl py-5 pl-16 pr-32 text-white placeholder-slate-500 outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all shadow-inner"
-          />
           <button
-            type="submit"
-            disabled={isLoading || !searchQuery.trim()}
-            className="absolute right-3 top-1/2 -translate-y-1/2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-900/40 text-sm flex items-center gap-2"
+            onClick={handleSearchClick}
+            className="px-6 py-4 bg-slate-800 border border-white/5 text-slate-500 font-bold rounded-2xl transition-all text-xs flex items-center justify-center gap-2"
           >
-            {isSearching ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magnifying-glass"></i>}
+            <i className="fas fa-magnifying-glass"></i>
             Explorar
           </button>
-        </form>
+        </div>
       </div>
 
-      <div className="glass-panel p-10 rounded-[3rem] border-white/10 bg-gradient-to-br from-slate-900 to-indigo-950/20 shadow-2xl min-h-[400px]">
+      <div className="glass-panel rounded-[2rem] md:rounded-[3rem] border-white/5 bg-[#0f172a]/30 min-h-[400px] flex flex-col shadow-2xl overflow-hidden relative">
         {isLoading ? (
-          <div className="py-24 flex flex-col items-center justify-center gap-6">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 md:p-20 gap-6">
             <div className="relative">
-              <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <i className="fas fa-earth-americas text-indigo-400 animate-pulse"></i>
-              </div>
+              <div className="w-16 h-16 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin"></div>
+              <i className="fas fa-earth-americas absolute inset-0 flex items-center justify-center text-indigo-400/50 text-xl animate-pulse"></i>
             </div>
+            <p className="text-slate-500 text-xs md:text-sm font-bold uppercase tracking-widest animate-pulse text-center">Viajando pelo conhecimento...</p>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 md:p-20 text-center animate-in zoom-in-95">
+            <i className="fas fa-circle-exclamation text-red-500 text-3xl mb-4"></i>
+            <h4 className="text-white font-bold text-lg mb-2">Ops! Algo deu errado</h4>
+            <p className="text-slate-500 text-sm mb-6">{error}</p>
+            <button onClick={() => fetchCultureData()} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all">Tentar Novamente</button>
+          </div>
+        ) : cultureData ? (
+          <div className="p-6 md:p-10 space-y-10 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="text-center">
-              <p className="text-indigo-400 font-medium">Conectando ao conhecimento global...</p>
-              <p className="text-xs text-slate-500 mt-1 italic">Buscando dados em tempo real sobre {language}.</p>
+              <h3 className="text-[9px] md:text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] md:tracking-[0.5em] mb-8 md:mb-12 italic">Deep Dive Cultural (Versão Essencial)</h3>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
+              {/* History Card */}
+              <div className="glass-panel rounded-[2.5rem] border-white/5 bg-black/20 overflow-hidden flex flex-col group transition-all">
+                <div className="p-6 md:p-8 space-y-4 md:space-y-6">
+                  <div className="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/10 shrink-0">
+                    <i className="fas fa-landmark text-amber-500 text-lg"></i>
+                  </div>
+                  <h4 className="text-lg md:text-xl font-bold text-white">{cultureData.history.title}</h4>
+                  <p className="text-slate-400 text-xs md:text-sm leading-relaxed">{cultureData.history.text}</p>
+                </div>
+                <div className="mt-auto h-1 w-full bg-amber-500/10"></div>
+              </div>
+
+              {/* Etiquette Card */}
+              <div className="glass-panel rounded-[2.5rem] border-white/5 bg-black/20 overflow-hidden flex flex-col group transition-all">
+                <div className="p-6 md:p-8 space-y-4 md:space-y-6">
+                  <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center border border-indigo-500/10 shrink-0">
+                    <i className="fas fa-handshake text-indigo-500 text-lg"></i>
+                  </div>
+                  <h4 className="text-lg md:text-xl font-bold text-white">{cultureData.etiquette.title}</h4>
+                  <p className="text-slate-400 text-xs md:text-sm leading-relaxed">{cultureData.etiquette.text}</p>
+                </div>
+                <div className="mt-auto h-1 w-full bg-indigo-500/10"></div>
+              </div>
+
+              {/* Expressions Card */}
+              <div className="glass-panel rounded-[2.5rem] border-white/5 bg-black/20 overflow-hidden flex flex-col group transition-all">
+                <div className="p-6 md:p-8 space-y-4 md:space-y-6">
+                  <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/10 shrink-0">
+                    <i className="fas fa-comment-dots text-emerald-500 text-lg"></i>
+                  </div>
+                  <h4 className="text-lg md:text-xl font-bold text-white">Língua Local</h4>
+                  <div className="space-y-5 md:space-y-6">
+                    {cultureData.expressions.slice(0, 3).map((exp, idx) => (
+                      <div key={idx} className="relative">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-emerald-400 font-bold text-sm md:text-base">"{exp.phrase}"</span>
+                          <button
+                            onClick={() => playExpression(exp.phrase, idx)}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${playingAudioIdx === idx ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-500 hover:text-white'}`}
+                          >
+                            <i className={`fas ${playingAudioIdx === idx ? 'fa-spinner fa-spin' : 'fa-volume-high'} text-[10px]`}></i>
+                          </button>
+                        </div>
+                        <p className="text-slate-300 text-[11px] md:text-xs mt-1">{exp.meaning}</p>
+                        <p className="text-slate-500 text-[10px] italic mt-1">Ex: {exp.example}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-auto h-1 w-full bg-emerald-500/10"></div>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-8">
-            {searchQuery && !isSearching && (
-              <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-widest mb-2">
-                <i className="fas fa-location-dot"></i>
-                Explorando: {searchQuery}
-              </div>
-            )}
-
-            <div className="prose prose-invert prose-indigo max-w-none text-slate-300 leading-relaxed text-lg whitespace-pre-wrap">
-              {content}
-            </div>
-
-            {links.length > 0 && (
-              <div className="pt-8 border-t border-white/5">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-5 flex items-center gap-2">
-                  <i className="fas fa-map-pin"></i>
-                  Locais e Referências Encontradas
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {links.map((link, i) => (
-                    <a
-                      key={i}
-                      href={link.uri}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`px-4 py-2.5 rounded-xl text-xs transition-all flex items-center gap-2 border ${link.uri.includes('google.com/maps')
-                        ? 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20'
-                        : 'bg-indigo-600/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-600/20'
-                        }`}
-                    >
-                      <i className={`fas ${link.uri.includes('google.com/maps') ? 'fa-location-arrow' : 'fa-link'}`}></i>
-                      {link.title}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center opacity-40">
+            <i className="fas fa-map-marked-alt text-5xl md:text-6xl text-slate-700 mb-6"></i>
+            <p className="text-slate-600 text-xs md:text-sm italic">O resumo cultural básico será carregado automaticamente.</p>
           </div>
         )}
-      </div>
-
-      {/* NEW: Cultural Insights Deep Dive */}
-      <div className="space-y-8 animate-in slide-in-from-bottom-8 duration-1000 delay-300">
-        <div className="flex items-center gap-4">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-          <h3 className="text-sm font-black text-indigo-400 uppercase tracking-[0.3em] whitespace-nowrap">Deep Dive Cultural</h3>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {isLoadingInsights || !insights ? (
-            [...Array(3)].map((_, i) => (
-              <div key={i} className="h-64 glass-panel rounded-3xl border-white/5 bg-white/5 animate-pulse"></div>
-            ))
-          ) : (
-            <>
-              {/* Card 1: Historical Curiosity */}
-              <div className="glass-panel p-8 rounded-[2rem] border-white/10 hover:border-indigo-500/30 transition-all group relative overflow-hidden flex flex-col">
-                <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/40"></div>
-                <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-500 mb-6 group-hover:scale-110 transition-transform">
-                  <i className="fas fa-landmark-dome text-xl"></i>
-                </div>
-                <h4 className="text-xl font-bold text-white mb-3">{insights.historicalCuriosity.title}</h4>
-                <p className="text-slate-400 text-sm leading-relaxed flex-1">{insights.historicalCuriosity.content}</p>
-                <div className="mt-4 pt-4 border-t border-white/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  Curiosidade Histórica
-                </div>
-              </div>
-
-              {/* Card 2: Social Custom */}
-              <div className="glass-panel p-8 rounded-[2rem] border-white/10 hover:border-indigo-500/30 transition-all group relative overflow-hidden flex flex-col">
-                <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/40"></div>
-                <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 mb-6 group-hover:scale-110 transition-transform">
-                  <i className="fas fa-people-group text-xl"></i>
-                </div>
-                <h4 className="text-xl font-bold text-white mb-3">{insights.socialCustom.title}</h4>
-                <p className="text-slate-400 text-sm leading-relaxed flex-1">{insights.socialCustom.content}</p>
-                <div className="mt-4 pt-4 border-t border-white/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  Costumes & Etiqueta
-                </div>
-              </div>
-
-              {/* Card 3: Idioms List */}
-              <div className="glass-panel p-8 rounded-[2rem] border-white/10 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/40"></div>
-                <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
-                  <i className="fas fa-comment-dots text-xl"></i>
-                </div>
-                <h4 className="text-xl font-bold text-white mb-6">Expressões Comuns</h4>
-                <div className="space-y-6">
-                  {insights.idioms.map((idiom, idx) => (
-                    <div key={idx} className="group/idiom">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-emerald-400 font-bold text-sm">"{idiom.phrase}"</span>
-                        <button
-                          onClick={() => playIdiomAudio(idiom.phrase, idx)}
-                          disabled={playingIdiomIdx !== null}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${playingIdiomIdx === idx ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/5 text-slate-500 hover:bg-white/10 hover:text-white'}`}
-                        >
-                          <i className={`fas ${playingIdiomIdx === idx ? 'fa-spinner fa-spin' : 'fa-volume-high'} text-xs`}></i>
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-slate-300 font-medium mb-1">{idiom.meaning}</p>
-                      <p className="text-[9px] text-slate-500 italic">Ex: {idiom.usage}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-6 pt-4 border-t border-white/5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                  Expressões Idiomáticas
-                </div>
-              </div>
-            </>
-          )}
-        </div>
       </div>
     </div>
   );

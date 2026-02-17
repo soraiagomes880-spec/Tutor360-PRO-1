@@ -1,13 +1,16 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { Language, LANGUAGES } from '../types';
+import { withRetry } from '../utils';
+import { getGeminiKey } from '../lib/gemini';
 
 interface GrammarLabProps {
   language: Language;
+  onAction?: () => Promise<boolean> | boolean;
 }
 
-export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
+export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onAction }) => {
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [translation, setTranslation] = useState<string | null>(null);
@@ -20,15 +23,32 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
     setIsLoading(true);
     setAnalysis(null);
     setTranslation(null);
+    setTranslation(null);
+    if (onAction) {
+      const allowed = await onAction();
+      if (!allowed) {
+        setIsLoading(false);
+        return;
+      }
+    }
     try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+      const apiKey = getGeminiKey();
+      if (!apiKey) {
+        setAnalysis("Configure a Gemini API Key no botão 'Conectar Nuvem'");
+        setIsLoading(false);
+        return;
+      }
+      const ai = new GoogleGenAI({ apiKey });
+      // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
+      const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
         contents: `Analyze this ${language} text for grammar, vocabulary, and flow. Suggest corrections and explain why in Portuguese: "${text}"`,
-      });
-      setAnalysis(response.text);
+      }));
+      setAnalysis(response.text ?? null);
     } catch (e: any) {
-      setAnalysis("Erro na análise: " + (e.message || e.toString()));
+      setAnalysis(e.message?.includes('503')
+        ? "O servidor de IA está ocupado. Por favor, tente novamente em instantes."
+        : "Erro na análise.");
     } finally {
       setIsLoading(false);
     }
@@ -38,14 +58,17 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
     if (!analysis || isTranslating) return;
     setIsTranslating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
+      const apiKey = getGeminiKey();
+      if (!apiKey) return;
+      const ai = new GoogleGenAI({ apiKey });
+      // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
+      const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
         contents: `Translate the following educational analysis from Portuguese to ${targetTransLang}. Keep the same formatting and tone: "${analysis}"`,
-      });
-      setTranslation(response.text);
-    } catch (e: any) {
-      setTranslation("Erro ao traduzir: " + (e.message || e.toString()));
+      }));
+      setTranslation(response.text ?? null);
+    } catch (e) {
+      setTranslation("Erro ao traduzir a análise.");
     } finally {
       setIsTranslating(false);
     }
@@ -59,7 +82,6 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-[550px]">
-        {/* Painel de Entrada */}
         <div className="flex flex-col space-y-4 h-full">
           <textarea
             value={text}
@@ -77,7 +99,6 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
           </button>
         </div>
 
-        {/* Painel de Resultado */}
         <div className="glass-panel p-8 rounded-[2rem] border-white/10 overflow-hidden flex flex-col bg-slate-900/30">
           <div className="flex items-center justify-between mb-6">
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Feedback & Correções</label>
@@ -135,7 +156,6 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
                       Traduzir Explicação
                     </button>
                   </div>
-                  <p className="text-[10px] text-slate-500 italic text-center">Traduzir o feedback da IA ajuda na compreensão profunda dos erros.</p>
                 </div>
               </div>
             ) : (
@@ -149,19 +169,9 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language }) => {
       </div>
 
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
       `}</style>
     </div>
   );

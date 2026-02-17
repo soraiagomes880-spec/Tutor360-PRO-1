@@ -3,6 +3,20 @@ export type AppTab = 'dashboard' | 'live' | 'pronunciation' | 'writing' | 'scan'
 
 export type Language = 'Inglês' | 'Espanhol' | 'Francês' | 'Alemão' | 'Português Brasil' | 'Japonês' | 'Italiano' | 'Chinês';
 
+// Add missing types used by VeoGenerator and History components
+export type AspectRatio = '16:9' | '9:16';
+
+export interface GenerationStatus {
+  step: 'idle' | 'processing' | 'complete' | 'error';
+  message: string;
+}
+
+export interface VideoResult {
+  url: string;
+  prompt: string;
+  aspectRatio: AspectRatio;
+}
+
 export interface LanguageOption {
   name: Language;
   code: string;
@@ -20,19 +34,6 @@ export const LANGUAGES: LanguageOption[] = [
   { name: 'Italiano', code: 'it', flag: '🇮🇹', region: 'Itália' },
   { name: 'Chinês', code: 'zh', flag: '🇨🇳', region: 'China' },
 ];
-
-export type AspectRatio = '16:9' | '9:16';
-
-export interface VideoResult {
-  url: string;
-  prompt: string;
-  aspectRatio: AspectRatio;
-}
-
-export interface GenerationStatus {
-  step: 'idle' | 'processing' | 'downloading' | 'complete' | 'error';
-  message: string;
-}
 
 declare global {
   interface AIStudio {
