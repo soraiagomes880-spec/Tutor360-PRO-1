@@ -233,7 +233,11 @@ const App: React.FC = () => {
             >
               <i className="fas fa-bars text-white"></i>
             </button>
-            <button
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <i className="fas fa-graduation-cap text-white text-xl"></i>
+            </div>
+            <div
+              className="cursor-pointer select-none"
               onClick={() => {
                 setSetupClickCount(prev => {
                   if (prev + 1 >= 5) {
@@ -243,13 +247,7 @@ const App: React.FC = () => {
                   return prev + 1;
                 });
               }}
-              className="hidden xs:flex w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg items-center justify-center shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
             >
-              <i className="fas fa-graduation-cap text-white text-xl"></i>
-            </button>
-            <div onClick={() => {
-              if (setupClickCount > 0) setSetupClickCount(0); // Optional reset
-            }}>
               <h1 className="text-lg md:text-xl font-bold tracking-tight text-white leading-none">Tutor 360</h1>
               <span className="text-[8px] md:text-[9px] bg-indigo-500/10 text-indigo-400/70 px-1.5 py-0.5 rounded border border-indigo-500/10 font-black uppercase mt-1 inline-block tracking-widest">{plan}</span>
             </div>
