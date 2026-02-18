@@ -1,6 +1,16 @@
 import { Crown } from "lucide-react";
+import { useState } from "react";
+import LegalModals from "./LegalModals";
 
 const Footer = () => {
+  const [modalType, setModalType] = useState<"terms" | "privacy" | "partnership" | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const openModal = (type: "terms" | "privacy" | "partnership") => {
+    setModalType(type);
+    setIsModalOpen(true);
+  };
+
   return (
     <footer className="py-12 border-t border-border/30">
       <div className="container mx-auto px-6">
@@ -19,23 +29,32 @@ const Footer = () => {
               Tecnologia educacional para escolas que querem liderar.
             </p>
           </div>
-          
+
           {/* Links */}
           <div className="flex flex-col items-center md:items-start gap-3">
             <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Links</h4>
             <nav className="flex flex-col gap-2">
-              <a href="#" className="text-sm text-foreground/80 hover:text-primary transition-colors">
+              <button
+                onClick={() => openModal("terms")}
+                className="text-sm text-foreground/80 hover:text-primary transition-colors text-left"
+              >
                 Termos de Uso
-              </a>
-              <a href="#" className="text-sm text-foreground/80 hover:text-primary transition-colors">
+              </button>
+              <button
+                onClick={() => openModal("privacy")}
+                className="text-sm text-foreground/80 hover:text-primary transition-colors text-left"
+              >
                 Política de Privacidade
-              </a>
-              <a href="#" className="text-sm text-foreground/80 hover:text-primary transition-colors">
+              </button>
+              <button
+                onClick={() => openModal("partnership")}
+                className="text-sm text-foreground/80 hover:text-primary transition-colors text-left"
+              >
                 Contrato de Parceria
-              </a>
+              </button>
             </nav>
           </div>
-          
+
           {/* Contact */}
           <div className="flex flex-col items-center md:items-start gap-3">
             <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">Contato</h4>
@@ -49,13 +68,19 @@ const Footer = () => {
             </nav>
           </div>
         </div>
-        
+
         <div className="pt-8 border-t border-border/30 text-center">
           <p className="text-muted-foreground text-sm">
             © 2026 Tutor 360 IA. Todos os direitos reservados.
           </p>
         </div>
       </div>
+
+      <LegalModals
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        type={modalType}
+      />
     </footer>
   );
 };
