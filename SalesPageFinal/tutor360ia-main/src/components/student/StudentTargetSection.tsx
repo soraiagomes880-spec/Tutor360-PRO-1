@@ -30,7 +30,7 @@ const StudentTargetSection = () => {
                          I'll change the layout to a list of benefits/checks.
                      */}
 
-                    <div className="md:col-span-3 flex flex-wrap justify-center gap-6">
+                    <div className="md:col-span-3 flex flex-wrap justify-center gap-4">
                         {[
                             "Quer falar com mais confiança",
                             "Sente que pratica pouco fora da aula",
@@ -38,11 +38,11 @@ const StudentTargetSection = () => {
                             "Quer usar tecnologia a seu favor",
                             "Quer destravar o idioma sem pressão"
                         ].map((item, index) => (
-                            <div key={index} className="bg-background p-6 rounded-2xl border border-border/50 flex items-center gap-4 min-w-[300px]">
-                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                            <div key={index} className="bg-background p-5 rounded-2xl border border-border/50 flex items-center gap-4 w-full sm:w-auto sm:min-w-[280px]">
+                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0">
                                     <Zap className="w-5 h-5" />
                                 </div>
-                                <p className="font-medium">{item}</p>
+                                <p className="font-medium text-sm sm:text-base">{item}</p>
                             </div>
                         ))}
                     </div>

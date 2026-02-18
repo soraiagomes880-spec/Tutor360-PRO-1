@@ -40,7 +40,7 @@ const StudentHowItWorksSection = () => {
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-4 gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
                     {steps.map((step, index) => (
                         <div key={index} className="relative">
                             <div className="text-6xl font-black text-secondary/10 mb-[-20px] relative z-0">
@@ -51,7 +51,7 @@ const StudentHowItWorksSection = () => {
                                 <p className="text-muted-foreground text-sm">{step.description}</p>
                             </div>
                             {index < steps.length - 1 && (
-                                <div className="hidden md:block absolute top-12 right-[-20%] w-[40%] h-[2px] bg-border/50" />
+                                <div className="hidden lg:block absolute top-12 right-[-20%] w-[40%] h-[2px] bg-border/50" />
                             )}
                         </div>
                     ))}

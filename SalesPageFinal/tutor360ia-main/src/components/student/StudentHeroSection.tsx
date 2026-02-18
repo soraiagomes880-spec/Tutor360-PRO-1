@@ -23,8 +23,8 @@ const StudentHeroSection = () => {
             </div>
 
             <div className="container mx-auto px-6 relative z-10">
-                <div className="max-w-2xl">
-                    <div className="text-left">
+                <div className="max-w-3xl mx-auto md:mx-0">
+                    <div className="text-center md:text-left">
                         {/* Badge */}
                         <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-secondary/10 border border-secondary/20 backdrop-blur-sm">
                             <span className="text-secondary text-xs">★</span>
@@ -34,7 +34,7 @@ const StudentHeroSection = () => {
                         </div>
 
                         {/* Headline */}
-                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6 text-foreground tracking-tight">
+                        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black leading-[1.1] mb-6 text-foreground tracking-tight">
                             Você não trava porque não sabe.{" "}
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-yellow-500 block mt-2">
                                 Você trava porque pratica pouco.
@@ -42,13 +42,13 @@ const StudentHeroSection = () => {
                         </h1>
 
                         {/* Subheadline */}
-                        <p className="text-lg md:text-xl text-muted-foreground/90 mb-8 leading-relaxed max-w-xl">
+                        <p className="text-base sm:text-lg md:text-xl text-muted-foreground/90 mb-8 leading-relaxed max-w-xl mx-auto md:mx-0">
                             A fluência não vem da teoria. Vem da prática.{" "}
                             <span className="text-foreground font-semibold">Pratique todos os dias com uma IA que se adapta ao seu nível.</span>
                         </p>
 
                         {/* Microcopy */}
-                        <div className="flex items-center gap-3 mb-8 text-sm text-muted-foreground/80 font-medium bg-background/50 backdrop-blur-md p-3 rounded-xl border border-white/5 inline-flex">
+                        <div className="flex items-center gap-3 mb-8 text-sm text-muted-foreground/80 font-medium bg-background/50 backdrop-blur-md p-3 rounded-xl border border-white/5 inline-flex text-left">
                             <div className="w-1 h-12 bg-gradient-to-b from-secondary to-yellow-600 rounded-full"></div>
                             <p>
                                 Criado para complementar sua escola<br />
@@ -57,7 +57,7 @@ const StudentHeroSection = () => {
                         </div>
 
                         {/* CTAs */}
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                             <Button
                                 className="bg-secondary hover:bg-secondary/90 text-background font-bold text-lg px-8 h-14 rounded-xl shadow-[0_0_20px_-5px_rgba(234,179,8,0.4)] transition-all hover:scale-105"
                                 asChild
