@@ -26,7 +26,7 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onActivity, ap
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Analyze this ${language} text for grammar. Suggest corrections in ${language}. Keep the tips short and point out 3 things: "${text}"`,
       });
       setAnalysis(response.text ?? "Análise concluída.");
@@ -44,7 +44,7 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onActivity, ap
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Traduza esta análise gramatical para ${targetTranslationLang}. Preserve a formatação técnica: "${analysis}"`,
       });
       setTranslation(response.text ?? "Erro na tradução.");

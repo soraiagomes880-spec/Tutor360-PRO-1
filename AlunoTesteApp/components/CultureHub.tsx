@@ -59,7 +59,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, apiKey }) => {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `O aluno quer saber sobre este local ou aspecto cultural em ${langInfo?.region || language}: "${searchQuery}". 
                    Explique detalhadamente em Português, focando em curiosidades culturais e dicas para quem está aprendendo ${language}. 
                    Se for um local físico, mencione sua importância histórica ou popularidade atual.`,
@@ -91,7 +91,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, apiKey }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Gere insights culturais sobre ${langInfo?.region || language}. 
                    Retorne um JSON com:
                    1. 'historicalCuriosity': { 'title', 'content' } (fato histórico fascinante)
@@ -152,7 +152,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, apiKey }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Quais são as 3 principais tendências culturais ou de entretenimento em ${langInfo?.region || language} esta semana? Resuma para um estudante de ${language} em Português.`,
         config: {
           tools: [{ googleSearch: {} }]
@@ -173,7 +173,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, apiKey }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash",
         contents: [{ parts: [{ text: phrase }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -230,7 +230,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, apiKey }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Traduza o seguinte conteúdo sobre cultura e exploração para ${targetTranslationLang}. Mantenha a formatação e o tom informativo: "${content}"`,
       });
       setTranslation(response.text ?? "Erro na tradução.");

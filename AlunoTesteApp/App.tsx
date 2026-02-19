@@ -32,7 +32,7 @@ const App: React.FC = () => {
   // Secret Config States
   const [configClicks, setConfigClicks] = useState(0);
   const [showConfigModal, setShowConfigModal] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('gemini_api_key') || localStorage.getItem('GEMINI_API_KEY') || '');
+  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('gemini_api_key') || localStorage.getItem('GEMINI_API_KEY') || (process.env.API_KEY || ''));
 
   const [stats, setStats] = useState<UserStats>(() => {
     try {

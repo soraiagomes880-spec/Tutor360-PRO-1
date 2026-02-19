@@ -118,7 +118,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd, apiK
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: [
           { role: 'user', parts: [{ text: `System context: You are a native tutor of ${language}. Response in ${language}. Be encouraging and end with a question. User input: ${text}` }] }
         ],
@@ -142,7 +142,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd, apiK
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Traduza o seguinte texto para ${targetTranslationLang}. Mantenha o tom e o contexto educativo: "${textToTranslate}"`,
       });
       const translatedText = response.text || "Erro na tradução.";
@@ -170,7 +170,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd, apiK
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash",
         contents: [{ parts: [{ text: `Read this perfectly in ${language}: ${text}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -230,7 +230,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onSessionEnd, apiK
       updateLevel();
 
       const sessionPromise = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+        model: 'gemini-2.0-flash-exp',
         callbacks: {
           onopen: () => {
             audioCtxIn.resume();

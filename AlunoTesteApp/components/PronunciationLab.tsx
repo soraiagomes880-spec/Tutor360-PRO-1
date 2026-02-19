@@ -62,7 +62,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash",
         contents: [{ parts: [{ text: `Say this clearly in ${language}: ${targetPhrase}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -97,7 +97,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Analyze the pronunciation of this phrase in ${language}: "${targetPhrase}". Provide 3 tips in ${language}. Keep the tips very short.`,
       });
       setFeedback(response.text ?? "Análise indisponível.");
@@ -113,7 +113,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Traduza esta análise de pronúncia para ${targetTranslationLang}: "${feedback}"`,
       });
       setTranslation(response.text ?? "Erro na tradução.");
