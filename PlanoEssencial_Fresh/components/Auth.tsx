@@ -35,7 +35,7 @@ export const Auth: React.FC = () => {
       <div className="max-w-md w-full animate-in fade-in zoom-in-95 duration-500">
         <div className="glass-panel p-10 rounded-[2.5rem] border-white/10 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500"></div>
-
+          
           <div className="text-center mb-10">
             <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-900/40 transform -rotate-6">
               <i className="fas fa-graduation-cap text-white text-3xl"></i>
@@ -47,23 +47,23 @@ export const Auth: React.FC = () => {
           <form onSubmit={handleAuth} className="space-y-4">
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">E-mail Institucional</label>
-              <input
-                type="email"
+              <input 
+                type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-600 outline-none focus:border-indigo-500/50 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-600 outline-none focus:border-indigo-500/50 transition-all" 
                 placeholder="seu@email.com"
               />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1">Senha de Acesso</label>
-              <input
-                type="password"
+              <input 
+                type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-600 outline-none focus:border-indigo-500/50 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-slate-600 outline-none focus:border-indigo-500/50 transition-all" 
                 placeholder="••••••••"
               />
             </div>
@@ -74,8 +74,8 @@ export const Auth: React.FC = () => {
               </div>
             )}
 
-            <button
-              type="submit"
+            <button 
+              type="submit" 
               disabled={loading}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-xl shadow-indigo-900/40 transition-all hover:scale-[1.02] active:scale-[0.98] mt-4 flex items-center justify-center gap-3"
             >
@@ -84,18 +84,12 @@ export const Auth: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-8 flex flex-col gap-4 text-center">
-            <button
+          <div className="mt-8 text-center">
+            <button 
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-[11px] font-bold text-slate-500 hover:text-indigo-400 uppercase tracking-widest transition-colors"
             >
               {isSignUp ? 'Já tem conta? Faça Login' : 'Ainda não tem acesso? Cadastre-se'}
-            </button>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('open-setup'))}
-              className="text-[9px] font-bold text-slate-700 hover:text-slate-500 uppercase tracking-[0.2em] transition-colors"
-            >
-              Recuperar Acesso Manual
             </button>
           </div>
         </div>

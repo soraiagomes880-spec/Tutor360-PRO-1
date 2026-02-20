@@ -1,13 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { Language, LANGUAGES } from '../types';
-import { withRetry } from '../utils';
-import { getGeminiKey } from '../lib/gemini';
 
 interface Message {
   role: 'user' | 'tutor';
   text: string;
-  translation?: string;
 }
 
 interface ChatSessionLog {
@@ -20,7 +18,6 @@ interface ChatSessionLog {
 interface LiveChatProps {
   language: Language;
   onAction?: () => void;
-  apiKey?: string;
 }
 
 const GREETINGS: Record<Language, string> = {
@@ -34,22 +31,21 @@ const GREETINGS: Record<Language, string> = {
   'Chinês': "你好！我是你的中文练习伙伴。你今天怎么样？"
 };
 
-export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }) => {
+export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction }) => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [transcription, setTranscription] = useState<Message[]>([]);
   const [pastSessions, setPastSessions] = useState<ChatSessionLog[]>([]);
   const [viewingHistoryIdx, setViewingHistoryIdx] = useState<number | null>(null);
-
+  
   const [currentInput, setCurrentInput] = useState('');
   const [currentOutput, setCurrentOutput] = useState('');
   const [playingTtsId, setPlayingTtsId] = useState<string | null>(null);
   const [audioLevel, setAudioLevel] = useState(0);
-
+  
   const [userTextResponse, setUserTextResponse] = useState('');
   const [targetTransLang, setTargetTransLang] = useState<Language>('Português Brasil');
-  const [isTranslating, setIsTranslating] = useState(false);
-
+  
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const audioContextInRef = useRef<AudioContext | null>(null);
   const audioContextOutRef = useRef<AudioContext | null>(null);
@@ -110,7 +106,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const audioCtxIn = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const audioCtxOut = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       audioContextInRef.current = audioCtxIn;
@@ -212,18 +208,18 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }
     setIsActive(false);
     setIsConnecting(false);
     if (sessionPromiseRef.current) {
-      sessionPromiseRef.current.then(session => { try { session.close(); } catch (e) { } });
+      sessionPromiseRef.current.then(session => { try { session.close(); } catch (e) {} });
       sessionPromiseRef.current = null;
     }
     if (audioContextInRef.current) {
-      if (audioContextInRef.current.state !== 'closed') audioContextInRef.current.close().catch(() => { });
+      if (audioContextInRef.current.state !== 'closed') audioContextInRef.current.close().catch(() => {});
       audioContextInRef.current = null;
     }
     if (audioContextOutRef.current) {
-      if (audioContextOutRef.current.state !== 'closed') audioContextOutRef.current.close().catch(() => { });
+      if (audioContextOutRef.current.state !== 'closed') audioContextOutRef.current.close().catch(() => {});
       audioContextOutRef.current = null;
     }
-    sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) { } });
+    sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) {} });
     sourcesRef.current.clear();
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -233,31 +229,8 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }
     setAudioLevel(0);
   };
 
-  const translateLastMessage = async () => {
-    const lastTutorMsg = [...transcription].reverse().find(m => m.role === 'tutor');
-    if (!lastTutorMsg || isTranslating) return;
-
-    setIsTranslating(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      const response = await withRetry<any>(() => ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Traduza esta frase de conversação para ${targetTransLang}. Mantenha o tom natural e informal: "${lastTutorMsg.text}"`,
-      }));
-
-      const translationText = response.text ?? "Erro na tradução.";
-      setTranscription(prev => prev.map(m =>
-        m === lastTutorMsg ? { ...m, translation: translationText } : m
-      ));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
-  const currentDisplayMessages = viewingHistoryIdx !== null
-    ? pastSessions[viewingHistoryIdx].messages
+  const currentDisplayMessages = viewingHistoryIdx !== null 
+    ? pastSessions[viewingHistoryIdx].messages 
     : transcription;
 
   return (
@@ -271,22 +244,23 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1.5 rounded-xl transition-all">
-            <i className="fas fa-circle-check text-[10px] text-indigo-400"></i>
-            <i className="fas fa-user-tie text-xs text-indigo-400"></i>
-            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Voz Elite</span>
-          </div>
-
-          {(isActive || isConnecting) && (
-            <div className="flex items-center gap-4 px-5 py-2.5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl">
-              <div className="flex gap-1 items-center">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="w-1 bg-indigo-400 rounded-full" style={{ height: isConnecting ? '30%' : `${Math.max(20, audioLevel * 100)}%`, transition: 'height 0.1s ease-out' }}></div>
-                ))}
-              </div>
-              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest animate-pulse">{isConnecting ? 'Conectando...' : 'IA Ativa'}</span>
+            {/* Seletor de Voz Bloqueado (Diferencial PRO) */}
+            <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl opacity-60 cursor-not-allowed">
+                <i className="fas fa-lock text-[10px] text-slate-500"></i>
+                <i className="fas fa-user-tie text-xs text-slate-400"></i>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Voz PRO</span>
             </div>
-          )}
+
+            {(isActive || isConnecting) && (
+            <div className="flex items-center gap-4 px-5 py-2.5 bg-indigo-500/10 border border-indigo-500/30 rounded-2xl">
+                <div className="flex gap-1 items-center">
+                {[...Array(6)].map((_, i) => (
+                    <div key={i} className="w-1 bg-indigo-400 rounded-full" style={{ height: isConnecting ? '30%' : `${Math.max(20, audioLevel * 100)}%`, transition: 'height 0.1s ease-out' }}></div>
+                ))}
+                </div>
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest animate-pulse">{isConnecting ? 'Conectando...' : 'IA Ativa'}</span>
+            </div>
+            )}
         </div>
       </div>
 
@@ -298,7 +272,7 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }
               <p className="text-slate-400 max-w-sm mb-12 text-sm leading-relaxed opacity-80">
                 Pratique sua fala em <span className="font-bold text-white">{language}</span> por voz ou tire dúvidas digitando abaixo.
               </p>
-
+              
               <button
                 onClick={startSession}
                 className="px-12 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-2xl shadow-indigo-900/50 transition-all hover:scale-[1.05] active:scale-95 flex items-center justify-center gap-3 text-lg"
@@ -308,19 +282,14 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }
               </button>
             </div>
           )}
-
+          
           {currentDisplayMessages.map((line, i) => (
             line.text && (
               <div key={`${line.role}-${i}`} className={`group relative p-6 rounded-[2rem] max-w-[85%] md:max-w-md animate-in slide-in-from-bottom-4 duration-500 ${line.role === 'tutor' ? 'bg-[#1e293b]/50 border border-white/5 self-start text-white' : 'bg-indigo-600 border border-indigo-400/30 self-end text-white'}`}>
                 <div className="flex justify-between items-center mb-2">
-                  <div className="text-[10px] uppercase font-bold tracking-widest opacity-40">{line.role === 'tutor' ? 'Tutor' : 'Você'}</div>
+                   <div className="text-[10px] uppercase font-bold tracking-widest opacity-40">{line.role === 'tutor' ? 'Tutor' : 'Você'}</div>
                 </div>
                 <p className="text-sm md:text-base leading-relaxed font-medium">{line.text}</p>
-                {line.translation && (
-                  <div className="mt-3 pt-3 border-t border-white/5 text-[11px] text-indigo-300 italic">
-                    {line.translation}
-                  </div>
-                )}
               </div>
             )
           ))}
@@ -335,34 +304,25 @@ export const LiveChat: React.FC<LiveChatProps> = ({ language, onAction, apiKey }
 
         <div className="p-6 bg-[#0f172a] border-t border-white/5">
           <div className="max-w-5xl mx-auto flex flex-col gap-4">
-
+            
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
-                <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">TRADUÇÃO</span>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={targetTransLang}
-                      onChange={(e) => setTargetTransLang(e.target.value as Language)}
-                      className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                    >
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">TRADUÇÃO</span>
+                  <div className="flex items-center gap-3">
+                    <select value={targetTransLang} onChange={(e) => setTargetTransLang(e.target.value as Language)} className="bg-transparent border-none text-xs text-slate-300 font-medium outline-none cursor-pointer hover:text-white transition-colors">
                       {LANGUAGES.map(lang => (
-                        <option key={lang.name} value={lang.name} className="bg-slate-900">{lang.name}</option>
+                        <option key={lang.name} value={lang.name} className="bg-[#0f172a]">{lang.name}</option>
                       ))}
                     </select>
-                    <button
-                      onClick={translateLastMessage}
-                      disabled={isTranslating || transcription.length === 0}
-                      className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border border-indigo-500/20 disabled:opacity-30"
-                    >
-                      {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : 'PRONTO'}
-                    </button>
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest px-2 py-0.5 bg-indigo-400/10 rounded">PRONTO</span>
                   </div>
                 </div>
 
-                <div className="hidden lg:flex items-center gap-2 bg-indigo-500/5 px-3 py-1.5 rounded-xl border border-indigo-500/10 transition-all">
-                  <i className="fas fa-sparkles text-[9px] text-indigo-400"></i>
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-400">Vocabulário Elite Ativo</span>
+                {/* Diferencial Vocabulário Avançado PRO (Bloqueado) */}
+                <div className="hidden lg:flex items-center gap-2 opacity-30">
+                    <i className="fas fa-lock text-[9px]"></i>
+                    <span className="text-[9px] font-bold uppercase tracking-wider">Vocabulário Avançado PRO</span>
                 </div>
               </div>
 

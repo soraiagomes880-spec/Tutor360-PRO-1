@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Language, LANGUAGES } from '../types';
+import { GoogleGenAI, Modality, GenerateContentResponse } from '@google/genai';
+import { Language } from '../types';
 import { withRetry } from '../utils';
-import { getGeminiKey } from '../lib/gemini';
 
 interface PronunciationLabProps {
   language: Language;
   onAction?: () => void;
-  apiKey?: string;
 }
 
 const DEFAULT_PHRASES: Record<Language, string> = {
@@ -21,17 +20,12 @@ const DEFAULT_PHRASES: Record<Language, string> = {
   'Chinês': '妈妈骑马。马慢，妈妈骂马。(Māma qí mǎ. Mǎ màn, māma mà mǎ.)'
 };
 
-export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, onAction, apiKey }) => {
+export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, onAction }) => {
   const [targetPhrase, setTargetPhrase] = useState(DEFAULT_PHRASES[language]);
   const [isRecording, setIsRecording] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPlayingTarget, setIsPlayingTarget] = useState(false);
-
-  // Translation states
-  const [targetTranslationLang, setTargetTranslationLang] = useState<Language>('Português Brasil');
-  const [translation, setTranslation] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-
+  
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
@@ -61,7 +55,7 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
     if (isPlayingTarget || !targetPhrase.trim()) return;
     setIsPlayingTarget(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
@@ -94,38 +88,20 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
       return;
     }
     setFeedback("Analisando sua pronúncia...");
-    setTranslation(null);
     if (onAction) onAction();
-
+    
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
-      const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Analyze the pronunciation of this phrase in ${language} for a student: "${targetPhrase}". Assume the student just spoke this. Provide 3 specific tips on how to pronounce specific sounds or words in this text clearly. Respond in Portuguese.`,
-      }));
-      setFeedback(response.text ?? null);
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
+        const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Analyze the pronunciation of this phrase in ${language} for a student: "${targetPhrase}". Assume the student just spoke this. Provide 3 specific tips on how to pronounce specific sounds or words in this text clearly. Respond in Portuguese.`,
+        }));
+        setFeedback(response.text ?? null);
     } catch (e: any) {
-      setFeedback(e.message?.includes('503')
-        ? "O servidor de IA está sobrecarregado. Tente novamente em instantes."
-        : "Erro ao analisar. Tente novamente.");
-    }
-  };
-
-  const translateFeedback = async () => {
-    if (!feedback || isTranslating || feedback === "Analisando sua pronúncia...") return;
-    setIsTranslating(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Traduza este feedback de pronúncia para ${targetTranslationLang}. Preserve o tom educativo e a formatação técnica: "${feedback}"`,
-      }));
-      setTranslation(response.text ?? "Erro na tradução.");
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsTranslating(false);
+        setFeedback(e.message?.includes('503') 
+          ? "O servidor de IA está sobrecarregado. Tente novamente em instantes." 
+          : "Erro ao analisar. Tente novamente.");
     }
   };
 
@@ -174,54 +150,20 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
         </div>
 
         <div className="glass-panel p-8 rounded-[2.5rem] border-white/10 shadow-xl flex flex-col min-h-[500px]">
-          <div className="flex justify-between items-center mb-6">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Feedback Fonético</label>
-            {feedback && (
-              <div className="flex flex-col gap-1 items-end">
-                <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest">TRADUÇÃO</label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={targetTranslationLang}
-                    onChange={(e) => setTargetTranslationLang(e.target.value as Language)}
-                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                  >
-                    {LANGUAGES.map(lang => (
-                      <option key={lang.name} value={lang.name} className="bg-slate-900">{lang.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={translateFeedback}
-                    disabled={isTranslating || !feedback}
-                    className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border border-indigo-500/20 disabled:opacity-30"
-                  >
-                    {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : 'PRONTO'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
+          <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-6">Feedback Fonético Personalizado</label>
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
             {feedback ? (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
-                <div className="flex items-center gap-4 text-green-400 mb-6 bg-green-400/10 p-5 rounded-2xl border border-green-400/20">
-                  <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center"><i className="fas fa-spell-check"></i></div>
-                  <div>
-                    <p className="font-bold">Análise do Tutor IA</p>
-                    <p className="text-[10px] uppercase opacity-80 tracking-tighter">Foco na clareza e entonação</p>
+                  <div className="flex items-center gap-4 text-green-400 mb-6 bg-green-400/10 p-5 rounded-2xl border border-green-400/20">
+                      <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center"><i className="fas fa-spell-check"></i></div>
+                      <div>
+                          <p className="font-bold">Análise do Tutor IA</p>
+                          <p className="text-[10px] uppercase opacity-80 tracking-tighter">Foco na clareza e entonação</p>
+                      </div>
                   </div>
-                </div>
-                <div className="prose prose-invert text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-white/5 p-6 rounded-2xl border border-white/5 italic">
-                  {feedback}
-                </div>
-                {translation && (
-                  <div className="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 animate-in fade-in slide-in-from-top-2">
-                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2">Tradução</p>
-                    <div className="prose prose-invert max-w-none text-slate-400 text-sm italic leading-relaxed whitespace-pre-wrap">
-                      {translation}
-                    </div>
+                  <div className="prose prose-invert text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-white/5 p-6 rounded-2xl border border-white/5 italic">
+                      {feedback}
                   </div>
-                )}
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-500 italic p-12 text-center">

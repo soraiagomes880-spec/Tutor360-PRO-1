@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { GoogleGenAI, GenerateContentResponse } from '@google/genai';
 import { Language, LANGUAGES } from '../types';
@@ -8,9 +7,10 @@ import { getGeminiKey } from '../lib/gemini';
 interface GrammarLabProps {
   language: Language;
   onAction?: () => void;
+  apiKey?: string;
 }
 
-export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onAction }) => {
+export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onAction, apiKey }) => {
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [translation, setTranslation] = useState<string | null>(null);
@@ -25,15 +25,10 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onAction }) =>
     setTranslation(null);
     if (onAction) onAction();
     try {
-      const apiKey = getGeminiKey();
-      if (!apiKey) {
-        setAnalysis("API Key não configurada. Use o título (5 cliques) para configurar.");
-        return;
-      }
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
       // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Analyze this ${language} text for grammar, vocabulary, and flow. Suggest corrections and explain why in Portuguese: "${text}"`,
       }));
       setAnalysis(response.text ?? null);
@@ -50,12 +45,10 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onAction }) =>
     if (!analysis || isTranslating) return;
     setIsTranslating(true);
     try {
-      const apiKey = getGeminiKey();
-      if (!apiKey) return;
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
       // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: `Translate the following educational analysis from Portuguese to ${targetTransLang}. Keep the same formatting and tone: "${analysis}"`,
       }));
       setTranslation(response.text ?? null);
@@ -92,12 +85,29 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onAction }) =>
         </div>
 
         <div className="glass-panel p-8 rounded-[2rem] border-white/10 overflow-hidden flex flex-col bg-slate-900/30">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex justify-between items-center mb-6">
             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Feedback & Correções</label>
-            {analysis && !isLoading && (
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gerado</span>
+            {analysis && (
+              <div className="flex flex-col gap-1 items-end">
+                <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest">TRADUÇÃO</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={targetTransLang}
+                    onChange={(e) => setTargetTransLang(e.target.value as Language)}
+                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    {LANGUAGES.map(lang => (
+                      <option key={lang.name} value={lang.name} className="bg-slate-900">{lang.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={translateAnalysis}
+                    disabled={isTranslating || !analysis}
+                    className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border border-indigo-500/20 disabled:opacity-30"
+                  >
+                    {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : 'PRONTO'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -110,49 +120,18 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onAction }) =>
               </div>
             ) : analysis ? (
               <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                <div className="prose prose-invert prose-indigo max-w-none text-slate-300 leading-relaxed whitespace-pre-wrap text-sm md:text-base">
+                <div className="prose prose-invert prose-indigo max-w-none text-slate-300 leading-relaxed whitespace-pre-wrap text-sm md:text-base bg-white/5 p-6 rounded-2xl border border-white/5 italic">
                   {analysis}
                 </div>
 
                 {translation && (
-                  <div className="mt-8 pt-8 border-t border-white/10 animate-in fade-in slide-in-from-top-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <i className="fas fa-language text-indigo-400"></i>
-                      <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Tradução para {targetTransLang}</span>
-                    </div>
-                    <div className="prose prose-invert max-w-none text-slate-400 leading-relaxed whitespace-pre-wrap italic text-sm">
+                  <div className="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 animate-in fade-in slide-in-from-top-2">
+                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2">Tradução</p>
+                    <div className="prose prose-invert max-w-none text-slate-400 text-sm italic leading-relaxed whitespace-pre-wrap">
                       {translation}
                     </div>
                   </div>
                 )}
-
-                <div className="pt-8 border-t border-white/5">
-                  <div className="flex flex-col gap-3">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Tradução</span>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <select
-                          value={targetTransLang}
-                          onChange={(e) => setTargetTransLang(e.target.value as Language)}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-300 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer hover:border-white/20 transition-all appearance-none"
-                        >
-                          {LANGUAGES.map(lang => (
-                            <option key={lang.name} value={lang.name} className="bg-slate-900">{lang.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={translateAnalysis}
-                        disabled={isTranslating}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 text-xs font-bold rounded-xl transition-all whitespace-nowrap active:scale-95 disabled:opacity-50"
-                      >
-                        {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-language"></i>}
-                        {translation ? 'Traduzir de Novo' : 'Traduzir Agora'}
-                        <span className="ml-2 px-1.5 py-0.5 bg-indigo-400 text-[#0f172a] rounded text-[8px]">PRONTO</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-600 italic">

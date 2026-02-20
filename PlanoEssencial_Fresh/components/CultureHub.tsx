@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Modality, Type, GenerateContentResponse } from '@google/genai';
 import { Language, LANGUAGES } from '../types';
 import { withRetry } from '../utils';
-import { getGeminiKey } from '../lib/gemini';
 
 interface Expression {
   phrase: string;
@@ -19,22 +19,16 @@ interface CultureData {
 interface CultureHubProps {
   language: Language;
   onAction?: () => void;
-  apiKey?: string;
 }
 
-export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiKey }) => {
+export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction }) => {
   const [cultureData, setCultureData] = useState<CultureData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [playingAudioIdx, setPlayingAudioIdx] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Translation states
-  const [targetTranslationLang, setTargetTranslationLang] = useState<Language>('Português Brasil');
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translations, setTranslations] = useState<{ [key: string]: string }>({});
-
+  
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> => {
@@ -52,7 +46,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
     if (playingAudioIdx !== null) return;
     setPlayingAudioIdx(index);
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: `Say this naturally in ${language}: ${text}` }] }],
@@ -82,26 +76,25 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
   const fetchCultureData = async (query?: string) => {
     setIsLoading(true);
     setError(null);
-    setTranslations({});
     if (onAction) onAction();
-
+    
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      const promptText = query
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const promptText = query 
         ? `Aja como um guia cultural. Explore o tema "${query}" relacionado a países que falam ${language}.`
         : `Gere um resumo cultural dinâmico sobre curiosidades e costumes atuais em países que falam ${language}.`;
 
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{
-          parts: [{
+        contents: [{ 
+          parts: [{ 
             text: `${promptText} 
             REGRAS OBRIGATÓRIAS:
             1. Retorne apenas o objeto JSON.
             2. Responda as explicações em PORTUGUÊS.
             3. As expressões devem estar no idioma original (${language}).
-            4. Seja conciso e use fatos interessantes.`
-          }]
+            4. Seja conciso e use fatos interessantes.` 
+          }] 
         }],
         config: {
           responseMimeType: "application/json",
@@ -145,7 +138,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
       const text = response.text || '';
       const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(jsonStr);
-
+      
       if (parsed && parsed.history && parsed.etiquette) {
         setCultureData(parsed);
       } else {
@@ -157,23 +150,6 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
     } finally {
       setIsLoading(false);
       setIsSearching(false);
-    }
-  };
-
-  const translateSection = async (sectionKey: string, textToTranslate: string) => {
-    if (isTranslating || !textToTranslate) return;
-    setIsTranslating(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Traduza este conteúdo cultural para ${targetTranslationLang}. Preserve o tom informativo e educativo: "${textToTranslate}"`,
-      }));
-      setTranslations(prev => ({ ...prev, [sectionKey]: response.text ?? "Erro na tradução." }));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsTranslating(false);
     }
   };
 
@@ -192,7 +168,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">Cultura & Exploração</h2>
           <p className="text-slate-400 text-sm md:text-base">Descubra curiosidades ou explore locais específicos em países de língua {language}.</p>
         </div>
-        <button
+        <button 
           onClick={handleSearchClick}
           className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1e293b]/40 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-slate-500 text-sm font-medium opacity-60"
         >
@@ -208,14 +184,14 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
             <div className="text-slate-600 mr-3 shrink-0">
               <i className="fas fa-lock"></i>
             </div>
-            <input
+            <input 
               type="text"
               disabled
               placeholder={`Busca Real-Time (ELITE)...`}
               className="flex-1 bg-transparent py-4 text-slate-600 placeholder-slate-700 outline-none text-sm cursor-not-allowed"
             />
           </div>
-          <button
+          <button 
             onClick={handleSearchClick}
             className="px-6 py-4 bg-slate-800 border border-white/5 text-slate-500 font-bold rounded-2xl transition-all text-xs flex items-center justify-center gap-2"
           >
@@ -243,36 +219,10 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
           </div>
         ) : cultureData ? (
           <div className="p-6 md:p-10 space-y-10 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-indigo-500/10 pb-8">
-              <h3 className="text-[9px] md:text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] md:tracking-[0.5em] italic">Deep Dive Cultural (Versão Elite)</h3>
-
-              <div className="flex flex-col gap-1 items-center md:items-end">
-                <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest">TRADUÇÃO GLOBAL</label>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={targetTranslationLang}
-                    onChange={(e) => setTargetTranslationLang(e.target.value as Language)}
-                    className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                  >
-                    {LANGUAGES.map(lang => (
-                      <option key={lang.name} value={lang.name} className="bg-slate-900">{lang.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => {
-                      translateSection('history', cultureData.history.text);
-                      translateSection('etiquette', cultureData.etiquette.text);
-                      // Translation of expressions is more complex, we'll just handle the text parts
-                    }}
-                    disabled={isTranslating}
-                    className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border border-indigo-500/20 disabled:opacity-30"
-                  >
-                    {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : 'PRONTO'}
-                  </button>
-                </div>
-              </div>
+            <div className="text-center">
+              <h3 className="text-[9px] md:text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] md:tracking-[0.5em] mb-8 md:mb-12 italic">Deep Dive Cultural (Versão Essencial)</h3>
             </div>
-
+            
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
               {/* History Card */}
               <div className="glass-panel rounded-[2.5rem] border-white/5 bg-black/20 overflow-hidden flex flex-col group transition-all">
@@ -282,12 +232,6 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
                   </div>
                   <h4 className="text-lg md:text-xl font-bold text-white">{cultureData.history.title}</h4>
                   <p className="text-slate-400 text-xs md:text-sm leading-relaxed">{cultureData.history.text}</p>
-                  {translations['history'] && (
-                    <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in">
-                      <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Tradução</p>
-                      <p className="text-slate-500 text-[11px] italic leading-relaxed">{translations['history']}</p>
-                    </div>
-                  )}
                 </div>
                 <div className="mt-auto h-1 w-full bg-amber-500/10"></div>
               </div>
@@ -300,12 +244,6 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
                   </div>
                   <h4 className="text-lg md:text-xl font-bold text-white">{cultureData.etiquette.title}</h4>
                   <p className="text-slate-400 text-xs md:text-sm leading-relaxed">{cultureData.etiquette.text}</p>
-                  {translations['etiquette'] && (
-                    <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in">
-                      <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-1">Tradução</p>
-                      <p className="text-slate-500 text-[11px] italic leading-relaxed">{translations['etiquette']}</p>
-                    </div>
-                  )}
                 </div>
                 <div className="mt-auto h-1 w-full bg-indigo-500/10"></div>
               </div>
@@ -322,7 +260,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
                       <div key={idx} className="relative">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-emerald-400 font-bold text-sm md:text-base">"{exp.phrase}"</span>
-                          <button
+                          <button 
                             onClick={() => playExpression(exp.phrase, idx)}
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${playingAudioIdx === idx ? 'bg-emerald-500 text-white' : 'bg-white/5 text-slate-500 hover:text-white'}`}
                           >
