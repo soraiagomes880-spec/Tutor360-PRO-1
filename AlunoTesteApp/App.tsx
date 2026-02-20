@@ -51,6 +51,13 @@ const SetupModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen
           >
             Salvar e Ativar Chave
           </button>
+
+          <button
+            onClick={() => { localStorage.removeItem('tutor_usage'); window.location.reload(); }}
+            className="w-full py-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 font-bold rounded-xl transition-all border border-red-500/20 active:scale-95 text-xs uppercase"
+          >
+            Resetar Limite de Uso
+          </button>
         </div>
 
         <div className="pt-6 border-t border-white/5 text-center">
@@ -81,8 +88,8 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('tutor_usage');
     return saved ? parseInt(saved) : 0;
   });
-  const [plan] = useState<PlanLevel>('Essencial');
-  const usageLimit = 15; // Set to 15 as requested for the test
+  const [plan] = useState<PlanLevel>('Elite'); // Unlocking all features for test
+  const usageLimit = 15; // Set to 15 globally
 
   // Exit Popup trigger
   useEffect(() => {

@@ -244,7 +244,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
         ) : cultureData ? (
           <div className="p-6 md:p-10 space-y-10 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-b border-indigo-500/10 pb-8">
-              <h3 className="text-[9px] md:text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] md:tracking-[0.5em] italic">Deep Dive Cultural (Versão Essencial)</h3>
+              <h3 className="text-[9px] md:text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] md:tracking-[0.5em] italic">Deep Dive Cultural (Versão Elite)</h3>
 
               <div className="flex flex-col gap-1 items-center md:items-end">
                 <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest">TRADUÇÃO GLOBAL</label>
