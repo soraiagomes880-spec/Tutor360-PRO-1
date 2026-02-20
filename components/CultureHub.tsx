@@ -54,7 +54,7 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash",
         contents: [{ parts: [{ text: `Say this naturally in ${language}: ${text}` }] }],
         config: {
           // Fix: Correct typo in responseModalities (was responseModalalities)
@@ -182,7 +182,10 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
   }, [language]);
 
   const handleSearchClick = () => {
-    alert("Busca em Tempo Real (Google Search) e Business Mode são exclusivos do Plano ELITE. Faça o upgrade agora!");
+    if (searchQuery.trim()) {
+      setIsSearching(true);
+      fetchCultureData(searchQuery);
+    }
   };
 
   return (
@@ -193,31 +196,33 @@ export const CultureHub: React.FC<CultureHubProps> = ({ language, onAction, apiK
           <p className="text-slate-400 text-sm md:text-base">Descubra curiosidades ou explore locais específicos em países de língua {language}.</p>
         </div>
         <button
-          onClick={handleSearchClick}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#1e293b]/40 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-slate-500 text-sm font-medium opacity-60"
+          onClick={() => { setSearchQuery('Tendências atuais e notícias'); fetchCultureData('Tendências atuais e notícias'); }}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-500/10 border border-indigo-500/30 rounded-xl hover:bg-indigo-500/20 transition-all text-indigo-400 text-sm font-bold shadow-lg shadow-indigo-900/20"
         >
-          <i className="fas fa-lock text-[10px]"></i>
-          <i className="fas fa-arrow-trend-up text-indigo-400"></i>
+          <i className="fas fa-arrow-trend-up"></i>
           Tendências ELITE
         </button>
       </div>
 
       <div className="glass-panel p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] border-white/5 bg-[#0f172a]/50">
         <div className="flex flex-col sm:flex-row items-stretch gap-4 relative">
-          <div className="flex-1 flex items-center bg-black/40 rounded-2xl md:rounded-3xl border border-white/5 px-4 md:px-6 py-1 opacity-50">
-            <div className="text-slate-600 mr-3 shrink-0">
-              <i className="fas fa-lock"></i>
+          <div className="flex-1 flex items-center bg-black/40 rounded-2xl md:rounded-3xl border border-white/5 px-4 md:px-6 py-1 focus-within:border-indigo-500/50 transition-all">
+            <div className="text-indigo-500 mr-3 shrink-0">
+              <i className="fas fa-globe"></i>
             </div>
             <input
               type="text"
-              disabled
-              placeholder={`Busca Real-Time (ELITE)...`}
-              className="flex-1 bg-transparent py-4 text-slate-600 placeholder-slate-700 outline-none text-sm cursor-not-allowed"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchClick()}
+              placeholder={`Explore qualquer tema cultural em ${language}...`}
+              className="flex-1 bg-transparent py-4 text-white placeholder-slate-600 outline-none text-sm"
             />
           </div>
           <button
             onClick={handleSearchClick}
-            className="px-6 py-4 bg-slate-800 border border-white/5 text-slate-500 font-bold rounded-2xl transition-all text-xs flex items-center justify-center gap-2"
+            disabled={!searchQuery.trim()}
+            className="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 text-white font-bold rounded-2xl transition-all text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/40"
           >
             <i className="fas fa-magnifying-glass"></i>
             Explorar

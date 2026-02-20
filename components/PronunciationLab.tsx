@@ -62,9 +62,8 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
     setIsPlayingTarget(true);
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: "gemini-2.5-flash-preview-tts",
+        model: "gemini-2.0-flash",
         contents: [{ parts: [{ text: `Say this clearly in ${language}: ${targetPhrase}` }] }],
         config: {
           // Fix: Correct typo in responseModalities (was responseModalalities)
@@ -99,9 +98,8 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
 
     try {
       const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      // Fix: Use GenerateContentResponse generic type for withRetry to resolve "unknown" type error
       const response = await withRetry<GenerateContentResponse>(() => ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-1.5-flash',
         contents: `Analyze the pronunciation of this phrase in ${language} for a student: "${targetPhrase}". Assume the student just spoke this. Provide 3 specific tips on how to pronounce specific sounds or words in this text clearly. Respond in Portuguese.`,
       }));
       setFeedback(response.text ?? null);
