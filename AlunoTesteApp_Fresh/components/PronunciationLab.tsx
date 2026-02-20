@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Modality } from '@google/genai';
-import { Language, LANGUAGES } from '../types';
-import { getGeminiKey } from '../lib/gemini';
+import { Language } from '../types';
 
 interface PronunciationLabProps {
   language: Language;
   onActivity?: () => void;
-  apiKey?: string;
 }
 
 const DEFAULT_PHRASES: Record<Language, string> = {
@@ -16,27 +14,21 @@ const DEFAULT_PHRASES: Record<Language, string> = {
   'Alemão': 'Fischers Fritz fischt frische Fische, frische Fische fischt Fischers Fritz.',
   'Português Brasil': 'O rato roeu a roupa do rei de Roma e a rainha raivosa rasgou o resto.',
   'Japonês': '生麦生米生卵 (Namamugi namamigome namatamago).',
-  'Italiano': 'Trentatré trentini entrarono a Trento todos e trentatré trotterellando.',
+  'Italiano': 'Trentatré trentini entrarono a Trento tutti e trentatré trotterellando.',
   'Chinês': '妈妈骑马。马慢，妈妈骂马。(Māma qí mǎ. Mǎ màn, māma mà mǎ.)'
 };
 
-export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, onActivity, apiKey }) => {
+export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, onActivity }) => {
   const [targetPhrase, setTargetPhrase] = useState(DEFAULT_PHRASES[language]);
   const [isRecording, setIsRecording] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPlayingTarget, setIsPlayingTarget] = useState(false);
-
-  // Translation states
-  const [targetTranslationLang, setTargetTranslationLang] = useState<Language>('Português Brasil');
-  const [translation, setTranslation] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-
+  
   const audioContextRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     setTargetPhrase(DEFAULT_PHRASES[language]);
     setFeedback(null);
-    setTranslation(null);
   }, [language]);
 
   const decode = (base64: string) => {
@@ -61,9 +53,9 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
     if (isPlayingTarget || !targetPhrase.trim()) return;
     setIsPlayingTarget(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text: `Say this clearly in ${language}: ${targetPhrase}` }] }],
         config: {
           responseModalities: [Modality.AUDIO],
@@ -93,35 +85,17 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
     setIsRecording(false);
     if (!targetPhrase.trim()) return;
     setFeedback("Analisando sua pronúncia...");
-    setTranslation(null);
-
+    
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Analyze the pronunciation of this phrase in ${language}: "${targetPhrase}". Provide 3 tips in ${language}. Keep the tips very short.`,
-      });
-      setFeedback(response.text ?? "Análise indisponível.");
-      if (onActivity) onActivity();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Analyze the pronunciation of this phrase in ${language}: "${targetPhrase}". Provide 3 tips in Portuguese.`,
+        });
+        setFeedback(response.text ?? "Análise indisponível.");
+        if (onActivity) onActivity();
     } catch (e) {
-      setFeedback("Erro ao analisar.");
-    }
-  };
-
-  const translateFeedback = async () => {
-    if (!feedback || isTranslating || feedback === "Analisando sua pronúncia..." || feedback === "Erro ao analisar.") return;
-    setIsTranslating(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `Traduza esta análise de pronúncia para ${targetTranslationLang}: "${feedback}"`,
-      });
-      setTranslation(response.text ?? "Erro na tradução.");
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsTranslating(false);
+        setFeedback("Erro ao analisar.");
     }
   };
 
@@ -159,49 +133,15 @@ export const PronunciationLab: React.FC<PronunciationLabProps> = ({ language, on
           </div>
         </div>
 
-        <div className="glass-panel p-8 rounded-[2.5rem] border-white/10 shadow-xl flex flex-col min-h-[500px] bg-slate-900/30">
-          <div className="flex justify-between items-center mb-6">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Feedback</label>
-            <div className="flex flex-col gap-1 items-end">
-              <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest">TRADUÇÃO</label>
-              <div className="flex items-center gap-2">
-                <select
-                  value={targetTranslationLang}
-                  onChange={(e) => setTargetTranslationLang(e.target.value as Language)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-indigo-400 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                >
-                  {LANGUAGES.map(lang => (
-                    <option key={lang.name} value={lang.name} className="bg-slate-900">{lang.name}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={translateFeedback}
-                  disabled={isTranslating || !feedback}
-                  className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border border-indigo-500/20 disabled:opacity-30"
-                >
-                  {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : 'PRONTO'}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
+        <div className="glass-panel p-8 rounded-[2.5rem] border-white/10 shadow-xl flex flex-col min-h-[500px]">
+          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">Feedback</label>
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             {feedback ? (
-              <div className="space-y-4">
-                <div className="prose prose-invert text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-white/5 p-6 rounded-2xl border border-white/5 shadow-inner">
-                  {feedback}
-                </div>
-                {translation && (
-                  <div className="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 animate-in fade-in slide-in-from-top-2">
-                    <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2">Tradução</p>
-                    <p className="text-slate-400 text-sm italic leading-relaxed">{translation}</p>
-                  </div>
-                )}
+              <div className="prose prose-invert text-slate-300 text-sm leading-relaxed whitespace-pre-wrap bg-white/5 p-6 rounded-2xl border border-white/5">
+                {feedback}
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center p-12 opacity-20 text-center">
-                <i className="fas fa-wand-magic-sparkles text-5xl mb-6"></i>
-                <p className="text-slate-500 italic text-sm font-medium">Grave sua voz para ver a análise.</p>
-              </div>
+              <p className="text-slate-600 italic text-center p-12">Grave sua voz para ver a análise.</p>
             )}
           </div>
         </div>

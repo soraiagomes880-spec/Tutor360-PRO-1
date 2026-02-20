@@ -10,6 +10,57 @@ import { CultureHub } from './components/CultureHub';
 import { Tutorial } from './components/Tutorial';
 import { UsageLimitModal } from './components/UsageLimitModal';
 import { AppTab, Language, LANGUAGES } from './types';
+import { getGeminiKey, saveGeminiKey } from './lib/gemini';
+
+const SetupModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  const [apiKey, setApiKey] = useState(getGeminiKey() || '');
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="w-full max-w-lg glass-panel p-8 rounded-[2.5rem] border-white/10 shadow-2xl relative">
+        <button onClick={onClose} className="absolute top-6 right-6 text-slate-500 hover:text-white transition-colors">
+          <i className="fas fa-times text-xl"></i>
+        </button>
+
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-900/40">
+            <i className="fas fa-cog text-white text-2xl"></i>
+          </div>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Configurações Avançadas</h2>
+          <p className="text-slate-400 text-xs mt-1 lowercase">Ambiente de Controle do Administrador</p>
+        </div>
+
+        <div className="space-y-4 mb-8">
+          <div>
+            <div className="flex justify-between items-center mb-2 px-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Google Gemini API Key</label>
+              {getGeminiKey() && <span className="text-[8px] bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 font-black uppercase">Ativo</span>}
+            </div>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="AIzaSy..."
+              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-700 outline-none focus:border-indigo-500/50 transition-all font-mono text-xs"
+            />
+          </div>
+          <button
+            onClick={() => { saveGeminiKey(apiKey); window.location.reload(); }}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-900/40 active:scale-95 text-xs uppercase"
+          >
+            Salvar e Ativar Chave
+          </button>
+        </div>
+
+        <div className="pt-6 border-t border-white/5 text-center">
+          <p className="text-[9px] text-slate-600 leading-relaxed max-w-xs mx-auto italic uppercase tracking-wider font-medium">As chaves são salvas localmente e priorizam as variáveis de ambiente da Vercel.</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface UserStats {
   lessons: number;
@@ -30,9 +81,9 @@ const App: React.FC = () => {
   const [hasShownExitPopup, setHasShownExitPopup] = useState(false);
 
   // Secret Config States
-  const [configClicks, setConfigClicks] = useState(0);
-  const [showConfigModal, setShowConfigModal] = useState(false);
-  const [customApiKey, setCustomApiKey] = useState(() => localStorage.getItem('gemini_api_key') || localStorage.getItem('GEMINI_API_KEY') || (process.env.API_KEY || ''));
+  const [setupClickCount, setSetupClickCount] = useState(0);
+  const [showSetup, setShowSetup] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState(() => getGeminiKey() || '');
 
   const [stats, setStats] = useState<UserStats>(() => {
     try {
@@ -47,12 +98,13 @@ const App: React.FC = () => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.shiftKey && (e.key === 'S' || e.key === 's')) {
-        setShowConfigModal(true);
+        setShowSetup(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [stats]);
+
   useEffect(() => {
     const handleMouseLeave = (e: MouseEvent) => {
       if (e.clientY < 5 && !hasShownExitPopup) {
@@ -64,28 +116,15 @@ const App: React.FC = () => {
     return () => document.removeEventListener('mouseleave', handleMouseLeave);
   }, [hasShownExitPopup]);
 
-  const configClicksRef = useRef<NodeJS.Timeout | null>(null);
-
   const handleConfigTrigger = () => {
-    if (configClicksRef.current) clearTimeout(configClicksRef.current);
-
-    setConfigClicks(prev => {
+    setSetupClickCount(prev => {
       const next = prev + 1;
       if (next >= 5) {
-        setShowConfigModal(true);
+        setShowSetup(true);
         return 0;
       }
-      configClicksRef.current = setTimeout(() => setConfigClicks(0), 3000);
       return next;
     });
-  };
-
-  const saveApiKey = (key: string) => {
-    localStorage.setItem('gemini_api_key', key);
-    localStorage.setItem('GEMINI_API_KEY', key);
-    setCustomApiKey(key);
-    setShowConfigModal(false);
-    window.location.reload(); // Reload to ensure all components pick up the new key
   };
 
   const recordActivity = (durationMinutes: number = 5) => {
@@ -99,7 +138,6 @@ const App: React.FC = () => {
       };
     });
 
-    // Check for limit
     if (stats.usage + 1 >= USAGE_LIMIT) {
       setShowLimitModal(true);
     }
@@ -110,38 +148,6 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#020617] text-slate-200 overflow-hidden">
 
-      {/* MODAL SECRETO DE CONFIGURAÇÃO */}
-      {showConfigModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => setShowConfigModal(false)}></div>
-          <div className="relative w-full max-w-md glass-panel p-8 rounded-[2rem] border-white/10 shadow-2xl animate-in zoom-in duration-200">
-            <h2 className="text-2xl font-bold text-white mb-4">Configuração Mestra</h2>
-            <p className="text-slate-400 text-sm mb-6">Insira a chave API do Gemini para as labs funcionarem online.</p>
-            <input
-              type="password"
-              defaultValue={customApiKey}
-              id="master_api_key"
-              placeholder="Cole sua API_KEY aqui..."
-              className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-white mb-6 outline-none focus:ring-2 focus:ring-indigo-600"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => saveApiKey((document.getElementById('master_api_key') as HTMLInputElement).value)}
-                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all"
-              >
-                Salvar e Ativar
-              </button>
-              <button
-                onClick={() => setShowConfigModal(false)}
-                className="px-6 py-3 bg-white/5 hover:bg-white/10 text-slate-400 rounded-xl transition-all"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* POPUP DE INTENÇÃO DE SAÍDA */}
       {showExitPopup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -151,11 +157,11 @@ const App: React.FC = () => {
               <i className="fas fa-times text-xl"></i>
             </button>
             <div className="w-24 h-24 bg-[#1e293b]/50 rounded-full flex items-center justify-center mx-auto mb-8 border border-white/5 shadow-inner">
-              <i className="fas fa-rocket text-indigo-500 text-4xl"></i>
+              <i className="fas fa-graduation-cap text-indigo-500 text-4xl"></i>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Acelere sua Fluência com o Parceiro Ideal!</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Acelere sua Fluência Agora!</h2>
             <p className="text-slate-200 text-base md:text-lg mb-10 leading-relaxed px-4 font-medium">
-              O Tutor 360 IA é o complemento perfeito para seus estudos. Não pare agora! Turbine suas aulas e ganhe confiança falando como um nativo com nosso apoio 24h.
+              O Tutor 360 IA é o seu passaporte para falar com confiança. Não pare seus estudos agora! Escolha um plano de aceleração e turbine seu aprendizado 24h por dia.
             </p>
             <button
               onClick={() => {
@@ -164,7 +170,7 @@ const App: React.FC = () => {
               }}
               className="w-full py-5 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-950/40 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 text-lg mb-8 uppercase tracking-wider"
             >
-              Escolher meu Plano de Aceleração
+              Escolher meu Plano de Estudos
               <i className="fas fa-arrow-right"></i>
             </button>
             <p className="text-[10px] font-bold text-slate-700 uppercase tracking-[0.4em]">
@@ -189,7 +195,7 @@ const App: React.FC = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
               <i className="fas fa-graduation-cap text-white text-xl"></i>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight uppercase">Tutor 360 <span className="text-indigo-400">Aluno Teste</span></h1>
+            <h1 className="text-xl font-bold text-white tracking-tight uppercase">Tutor 360 <span className="text-indigo-400">IA</span></h1>
           </div>
           <div className="relative">
             <button onClick={() => setShowLangMenu(!showLangMenu)} className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-xl hover:bg-white/10 transition-all">
@@ -223,6 +229,7 @@ const App: React.FC = () => {
             {activeTab === 'help' && <Tutorial />}
           </Suspense>
         </div>
+        <SetupModal isOpen={showSetup} onClose={() => setShowSetup(false)} />
       </main>
     </div>
   );

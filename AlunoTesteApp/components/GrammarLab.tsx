@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { Language, LANGUAGES } from '../types';
+import { getGeminiKey } from '../lib/gemini';
 
 interface GrammarLabProps {
   language: Language;
@@ -24,7 +25,7 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onActivity, ap
     setAnalysis(null);
     setTranslation(null);
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
+      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
         contents: `Analyze this ${language} text for grammar. Suggest corrections in ${language}. Keep the tips short and point out 3 things: "${text}"`,
@@ -42,7 +43,7 @@ export const GrammarLab: React.FC<GrammarLabProps> = ({ language, onActivity, ap
     if (!analysis || isTranslating || analysis === "Analisando..." || analysis === "Erro na análise.") return;
     setIsTranslating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || process.env.API_KEY || '' });
+      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
         contents: `Traduza esta análise gramatical para ${targetTranslationLang}. Preserve a formatação técnica: "${analysis}"`,

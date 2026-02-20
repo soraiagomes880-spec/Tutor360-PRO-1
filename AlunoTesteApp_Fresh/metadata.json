@@ -1,0 +1,9 @@
+{
+  "name": "TUTOR 360-  ALUNO-TESTE",
+  "description": "An AI-powered language learning platform featuring live voice chat, pronunciation analysis, and real-world visual scanning.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}

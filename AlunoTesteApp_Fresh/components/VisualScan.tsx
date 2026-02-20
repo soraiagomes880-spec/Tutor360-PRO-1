@@ -2,25 +2,23 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, Modality } from '@google/genai';
 import { Language, LANGUAGES } from '../types';
-import { getGeminiKey } from '../lib/gemini';
 
 interface VisualScanProps {
   language: Language;
   onActivity?: () => void;
-  apiKey?: string;
 }
 
-export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, apiKey }) => {
+export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity }) => {
   const [image, setImage] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
-
+  
   // Estados para Tradução
   const [translation, setTranslation] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [targetTranslationLang, setTargetTranslationLang] = useState<Language>('Português Brasil');
-
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,23 +71,23 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, ap
     setResult(null);
     setTranslation(null); // Limpa tradução anterior ao fazer nova varredura
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
-      const base64Data = base64Img.split(',')[1];
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: {
-          parts: [
-            { text: `Analyze this image and describe it in ${language}. Provide vocabulary tips and cultural context. Respond ONLY in ${language}.` },
-            { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }
-          ]
-        }
-      });
-      setResult(response.text ?? "Erro ao descrever.");
-      if (onActivity) onActivity();
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const base64Data = base64Img.split(',')[1];
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: {
+                parts: [
+                    { text: `Analyze this image and describe it in ${language}. Provide vocabulary tips and cultural context. Respond ONLY in ${language}.` },
+                    { inlineData: { data: base64Data, mimeType: 'image/jpeg' } }
+                ]
+            }
+        });
+        setResult(response.text ?? "Erro ao descrever.");
+        if (onActivity) onActivity();
     } catch (e) {
-      setResult("Falha na análise.");
+        setResult("Falha na análise.");
     } finally {
-      setIsScanning(false);
+        setIsScanning(false);
     }
   };
 
@@ -97,9 +95,9 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, ap
     if (!result || isTranslating) return;
     setIsTranslating(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey || getGeminiKey() || '' });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3-flash-preview',
         contents: `Traduza o seguinte texto para ${targetTranslationLang}. Mantenha a formatação e o tom educativo: "${result}"`,
       });
       setTranslation(response.text ?? "Erro na tradução.");
@@ -114,36 +112,36 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, ap
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-white">Varredura Visual</h2>
-
+        
         <div className="flex items-center gap-3">
           {/* BOTÃO BAIXAR ARQUIVO (UPLOAD) */}
-          <button
+          <button 
             onClick={() => fileInputRef.current?.click()}
             className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg shadow-indigo-900/40 active:scale-95"
           >
             <i className="fas fa-folder-open text-sm"></i>
             Baixar Arquivo
           </button>
-
-          <input
+          
+          <input 
             ref={fileInputRef}
-            type="file"
-            accept="image/*"
+            type="file" 
+            accept="image/*" 
             onChange={handleFileChange}
-            className="hidden"
+            className="hidden" 
           />
 
           {/* BOTÃO ABRIR CÂMERA */}
           {!showCamera ? (
-            <button
-              onClick={startCamera}
+            <button 
+              onClick={startCamera} 
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-[11px] uppercase tracking-widest transition-all shadow-lg shadow-blue-900/20 active:scale-95 flex items-center gap-2"
             >
               <i className="fas fa-camera text-sm"></i> Abrir Câmera
             </button>
           ) : (
-            <button
-              onClick={stopCamera}
+            <button 
+              onClick={stopCamera} 
               className="px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all"
             >
               Sair da Câmera
@@ -158,8 +156,8 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, ap
           {showCamera ? (
             <div className="absolute inset-0">
               <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-              <button
-                onClick={capturePhoto}
+              <button 
+                onClick={capturePhoto} 
                 className="absolute bottom-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-white rounded-full border-[6px] border-indigo-500/30 shadow-2xl transition-all hover:scale-110 active:scale-90 flex items-center justify-center"
               >
                 <div className="w-14 h-14 rounded-full border-2 border-slate-200"></div>
@@ -168,12 +166,12 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, ap
           ) : image ? (
             <img src={image} className="w-full h-full object-cover animate-in zoom-in duration-500" />
           ) : (
-            <div className="text-center p-12 opacity-40">
-              <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-inner">
-                <i className="fas fa-image text-4xl text-slate-500"></i>
-              </div>
-              <p className="text-slate-500 font-medium">Selecione um arquivo ou abra a câmera</p>
-            </div>
+             <div className="text-center p-12 opacity-40">
+               <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5 shadow-inner">
+                 <i className="fas fa-image text-4xl text-slate-500"></i>
+               </div>
+               <p className="text-slate-500 font-medium">Selecione um arquivo ou abra a câmera</p>
+             </div>
           )}
           <canvas ref={canvasRef} className="hidden" />
         </div>
@@ -184,7 +182,7 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, ap
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Leitura da IA ({language})</label>
             {isScanning && <i className="fas fa-circle-notch fa-spin text-indigo-500 text-xs"></i>}
           </div>
-
+          
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-6">
             {isScanning ? (
               <div className="flex flex-col items-center justify-center h-full gap-6">
@@ -198,27 +196,28 @@ export const VisualScan: React.FC<VisualScanProps> = ({ language, onActivity, ap
                   <p className="text-slate-200 text-base md:text-lg leading-relaxed whitespace-pre-wrap font-medium">{result}</p>
                 </div>
 
-                <div className="pt-6 border-t border-white/5 space-y-4">
-                  <div className="flex flex-col gap-1 items-start">
-                    <label className="text-[8px] text-slate-500 font-black uppercase tracking-widest">TRADUÇÃO</label>
-                    <div className="flex items-center gap-2 w-full">
-                      <select
+                {/* Área de Tradução */}
+                <div className="pt-4 border-t border-white/5 space-y-4">
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <div className="flex-1 w-full">
+                      <select 
                         value={targetTranslationLang}
                         onChange={(e) => setTargetTranslationLang(e.target.value as Language)}
-                        className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-indigo-300 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs text-indigo-300 outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
                       >
                         {LANGUAGES.map(lang => (
                           <option key={lang.name} value={lang.name} className="bg-slate-900">{lang.name}</option>
                         ))}
                       </select>
-                      <button
-                        onClick={translateResult}
-                        disabled={isTranslating || !result}
-                        className="px-6 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-30"
-                      >
-                        {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : 'PRONTO'}
-                      </button>
                     </div>
+                    <button 
+                      onClick={translateResult}
+                      disabled={isTranslating}
+                      className="w-full sm:w-auto px-6 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-slate-300 transition-all flex items-center justify-center gap-2 active:scale-95"
+                    >
+                      {isTranslating ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-language"></i>}
+                      {isTranslating ? 'Traduzindo...' : 'Traduzir Leitura'}
+                    </button>
                   </div>
 
                   {translation && (
